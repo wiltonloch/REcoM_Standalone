@@ -1,7 +1,7 @@
 !===============================================================================
 ! REcoM_Forcing
 !===============================================================================
-subroutine REcoM_Forcing(zNodes, n, Nn, state, SurfSW, Loc_slp , Temp, Sali, Sali_depth &
+subroutine REcoM_Forcing(zNodes, n, Nn, state, SurfSW, Loc_slp, Temp, Sali, Sali_depth &
             , CO2_watercolumn                                          &
             , pH_watercolumn                                           &
             , pCO2_watercolumn                                         &
@@ -66,7 +66,7 @@ subroutine REcoM_Forcing(zNodes, n, Nn, state, SurfSW, Loc_slp , Temp, Sali, Sal
     !!---- Subroutine Depth
 
     real(kind=8),dimension(mesh%nl)           :: zF                   ! [m] Depth of fluxes
-    real(kind=8),dimension(mesh%nl,5)         :: SinkVel              ! [m/day]
+    real(kind=8),dimension(mesh%nl,6)         :: SinkVel              ! [m/day]
     real(kind=8),dimension(mesh%nl-1)         :: thick                ! [m] Vertical distance between two nodes = Thickness 
     real(kind=8),dimension(mesh%nl-1)         :: recipthick           ! [1/m] reciprocal of thick
 
@@ -110,10 +110,13 @@ subroutine REcoM_Forcing(zNodes, n, Nn, state, SurfSW, Loc_slp , Temp, Sali, Sal
 
     tiny_Si  = tiny_C_d/SiCmax      ! SiCmax = 0.8d0
 
-#if defined (__coccos)
-    tiny_N_c = tiny_chl/chl2N_max_c ! 0.00001/ 3.5d0 
+if (enable_coccos) then
+    tiny_N_c = tiny_chl/chl2N_max_c ! 0.00001/ 3.5d0
     tiny_C_c = tiny_N_c/NCmax_c     ! NCmax_c = 0.15d0
-#endif
+
+    tiny_N_p = tiny_chl/chl2N_max_p ! 0.00001/ 3.5d0 
+    tiny_C_p = tiny_N_p/NCmax_p     ! NCmax_c = 0.15d0
+endif
 
     call Cobeta(partit, mesh)      
     call Depth_calculations(n, Nn,SinkVel,zF,thick,recipthick, partit, mesh)
@@ -183,7 +186,7 @@ subroutine REcoM_Forcing(zNodes, n, Nn, state, SurfSW, Loc_slp , Temp, Sali, Sal
     endif
 
     call flxco2(co2flux, co2ex, dpco2surf,                                                   &
-                ph, pco2surf, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis, &
+                ph, pco2surf, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p, tempis, K0, &
                 REcoM_T, REcoM_S, REcoM_Alk, REcoM_DIC, REcoM_Si, REcoM_Phos, kw660, LocAtmCO2, Patm, thick(One), Nmocsy, Lond,Latd, &
                 optCON='mol/m3',optT='Tpot   ',optP='m ',optB='u74',optK1K2='l  ',optKf='dg',optGAS='Pinsitu',optS='Sprc')
 
@@ -259,16 +262,20 @@ if (recom_debug .and. mype==0) print *, achar(27)//'[36m'//'     --> REcoM_sms'/
   state(1:nn,idiac)  = max(tiny_C_d,state(1:nn,idiac))
   state(1:nn,idiasi) = max(tiny_Si, state(1:nn,idiasi))
 
-#if defined (__coccos)
+if (enable_coccos) then
   state(1:nn,icchl)  = max(tiny_chl,state(1:nn,icchl))
   state(1:nn,icocn)  = max(tiny_N_c,state(1:nn,icocn))
   state(1:nn,icocc)  = max(tiny_C_c,state(1:nn,icocc))
-#endif
 
-#if defined (__3Zoo2Det)
+  state(1:nn,iphachl)  = max(tiny_chl,state(1:nn,iphachl))
+  state(1:nn,iphan)  = max(tiny_N_p,state(1:nn,iphan))
+  state(1:nn,iphac)  = max(tiny_C_p,state(1:nn,iphac))
+endif
+
+if (enable_3zoo2det) then
   state(1:nn,imiczoon)  = max(tiny,state(1:nn,imiczoon))
   state(1:nn,imiczooc)  = max(tiny,state(1:nn,imiczooc))
-#endif
+endif
 
 if (recom_debug .and. mype==0) print *, achar(27)//'[36m'//'     --> ciso after REcoM_Forcing'//achar(27)//'[0m'
 
@@ -339,12 +346,17 @@ if (recom_debug .and. mype==0) print *, achar(27)//'[36m'//'     --> ciso after 
      locNNAd = sum(vertNNAd(1:nn) * thick(1:nn))
      locChldegd = sum(vertChldegd(1:nn) * thick(1:nn))
 
-#if defined (__coccos)
+if (enable_coccos) then
      locNPPc = sum(vertNPPc(1:nn) * thick(1:nn))
      locGPPc = sum(vertGPPc(1:nn) * thick(1:nn))
      locNNAc = sum(vertNNAc(1:nn) * thick(1:nn))
      locChldegc = sum(vertChldegc(1:nn) * thick(1:nn))
-#endif
+
+     locNPPp = sum(vertNPPp(1:nn) * thick(1:nn))
+     locGPPp = sum(vertGPPp(1:nn) * thick(1:nn))
+     locNNAp = sum(vertNNAp(1:nn) * thick(1:nn))
+     locChldegp = sum(vertChldegp(1:nn) * thick(1:nn))
+endif
 
   end if
 end subroutine REcoM_Forcing
