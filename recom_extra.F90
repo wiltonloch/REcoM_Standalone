@@ -3,16 +3,9 @@
 !===============================================================================
 subroutine Depth_calculations(n, nn, wf, zf, thick, recipthick, partit, mesh)
     use recom_config
-    use mod_mesh
-    use MOD_PARTIT
-    use MOD_PARSUP
-    use o_PARAM
-    use o_ARRAYS
-    use g_CONFIG
-    use g_forcing_arrays
-    use g_comm_auto
-    use g_clock
-    use g_rotate_grid
+    use mod_mesh, only: t_mesh, sparse_matrix
+    use MOD_PARTIT, only: t_partit, com_struct
+    use g_clock, only: wp
 
     implicit none
 
