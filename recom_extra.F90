@@ -154,8 +154,8 @@ end subroutine Cobeta
     use REcoM_declarations
     use REcoM_LocVar
     use REcoM_GloVar
-    use mod_mesh, only: t_mesh, sparse_matrix
-    use MOD_PARTIT, only: t_partit, com_struct
+    use mod_mesh, only: t_mesh
+    use MOD_PARTIT, only: t_partit
     use g_clock, only: daynew
     use o_PARAM, only: wp
 
@@ -166,10 +166,12 @@ end subroutine Cobeta
     type(t_partit), intent(inout),   target          :: partit
     type(t_mesh)  , intent(inout),   target          :: mesh
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
+    integer, pointer                       :: myDim_nod2D, eDim_nod2D
+    real(kind=WP), dimension(:,:), pointer :: geo_coord_nod2D
+
+    myDim_nod2D                                   => partit%myDim_nod2D
+    eDim_nod2D                                    => partit%eDim_nod2D
+    geo_coord_nod2D(1:2,1:myDim_nod2D+eDim_nod2D) => mesh%geo_coord_nod2D(:,:)
  
    ! Values from FESOM                                                                                                 
 
