@@ -3,8 +3,8 @@
 !===============================================================================
 subroutine Depth_calculations(n, nn, wf, zf, thick, recipthick, partit, mesh)
     use recom_config
-    use mod_mesh, only: t_mesh, sparse_matrix
-    use MOD_PARTIT, only: t_partit, com_struct
+    use mod_mesh, only: t_mesh
+    use MOD_PARTIT, only: t_partit
     use g_clock, only: wp
 
     implicit none
@@ -24,10 +24,15 @@ subroutine Depth_calculations(n, nn, wf, zf, thick, recipthick, partit, mesh)
     ! Local variables
     integer                                          :: k           ! Layer index
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
+    integer, pointer                       :: myDim_nod2D, eDim_nod2D
+    real(kind=WP), dimension(:,:), pointer :: hnode
+    real(kind=WP), dimension(:,:), pointer :: zbar_3d_n
+
+    myDim_nod2D                                    => partit%myDim_nod2D
+    eDim_nod2D                                     => partit%eDim_nod2D
+    hnode(1:mesh%nl-1, 1:myDim_nod2D+eDim_nod2D)   => mesh%hnode(:,:)
+    zbar_3d_n(1:mesh%nl, 1:myDim_nod2D+eDim_nod2D) => mesh%zbar_3d_n(:,:)
+
 ! ======================================================================================
 !! zbar(nl) allocate the array for storing the standard depths (depth of layers)
 !! zbar is negative 
