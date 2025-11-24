@@ -93,12 +93,12 @@ end subroutine Depth_calculations
 subroutine Cobeta(partit, mesh)
     use REcoM_GloVar
     use g_clock, only: daynew, ndpyr
-    use mod_mesh, only: t_mesh, sparse_matrix
-    use MOD_PARTIT, only: t_partit, com_struct
+    use mod_mesh, only: t_mesh
+    use MOD_PARTIT, only: t_partit
     use o_PARAM, only: wp, pi
 
     implicit none
-  	
+
     ! Input parameters
     type(t_partit), intent(inout),   target          :: partit
     type(t_mesh)  , intent(inout),   target          :: mesh
@@ -113,10 +113,12 @@ subroutine Cobeta(partit, mesh)
     ! Constants
     real(kind=8), parameter                          :: nWater        = 1.33  ! Refractive indices of water
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
+    integer, pointer                       :: myDim_nod2D, eDim_nod2D
+    real(kind=WP), dimension(:,:), pointer :: geo_coord_nod2D
+
+    myDim_nod2D                                   => partit%myDim_nod2D
+    eDim_nod2D                                    => partit%eDim_nod2D
+    geo_coord_nod2D(1:2,1:myDim_nod2D+eDim_nod2D) => mesh%geo_coord_nod2D(:,:)
 
 !! find day (****NOTE for year starting in winter*****)  
 !! Paltridge, G. W. and C. M. R. Platt, Radiative Processes 
