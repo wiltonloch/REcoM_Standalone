@@ -120,7 +120,7 @@ if (enable_coccos) then
 endif
 
     call Cobeta(daynew, ndpyr, partit%myDim_nod2D, partit%eDim_nod2D, mesh%geo_coord_nod2D)
-    call Depth_calculations(n, Nn,SinkVel,zF,thick,recipthick, partit, mesh)
+    call Depth_calculations(n, Nn,SinkVel,zF,thick,recipthick, partit%myDim_nod2D, partit%eDim_nod2D, mesh%nl, mesh%hnode, mesh%zbar_3d_n)
 
     !! *** Mocsy ***
 

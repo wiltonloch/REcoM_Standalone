@@ -1,20 +1,19 @@
 module recom_extra
     interface
-        subroutine Depth_calculations(n, nn, wf, zf, thick, recipthick, partit, mesh)
-            use mod_mesh, only: t_mesh
-            use MOD_PARTIT, only: t_partit
+        subroutine Depth_calculations(n, nn, wf, zf, thick, recipthick, myDim_nod2D, eDim_nod2D, nl, hnode, zbar_3d_n)
+            use o_param, only: wp
 
             ! Input parameters
-            type(t_partit), intent(inout),   target          :: partit
-            type(t_mesh)  , intent(inout),   target          :: mesh
-            integer       , intent(in)                       :: nn	    ! Total number of vertical nodes
-            integer       , intent(in)                       :: n           ! Current node
+            integer, intent(in)                        :: n           ! Current node
+            integer, intent(in)                        :: nn	    ! Total number of vertical nodes
+            integer, intent(in)                        :: myDim_nod2D, eDim_nod2D, nl
+            real(kind=WP), intent(in), dimension(:,:)  :: hnode, zbar_3d_n
 
             ! Output arrays
-            real(kind=8), dimension(mesh%nl,5), intent(out)  :: wf          ! [m/day] Flux velocities at the border of the control volumes
-            real(kind=8), dimension(mesh%nl),   intent(out)  :: zf          ! [m] Depth of vertical fluxes
-            real(kind=8), dimension(mesh%nl-1), intent(out)  :: thick       ! [m] Distance between two nodes = layer thickness
-            real(kind=8), dimension(mesh%nl-1), intent(out)  :: recipthick  ! [1/m] Reciprocal thickness
+            real(kind=8), dimension(nl,5), intent(out) :: wf          ! [m/day] Flux velocities at the border of the control volumes
+            real(kind=8), dimension(nl),   intent(out) :: zf          ! [m] Depth of vertical fluxes
+            real(kind=8), dimension(nl-1), intent(out) :: thick       ! [m] Distance between two nodes = layer thickness
+            real(kind=8), dimension(nl-1), intent(out) :: recipthick  ! [1/m] Reciprocal thickness
         end subroutine Depth_calculations
 
         subroutine Cobeta(daynew, ndpyr, myDim_nod2D, eDim_nod2D, geo_coord_nod2D)
@@ -35,37 +34,26 @@ end module recom_extra
 !===============================================================================
 ! Subroutine for calculating flux-depth and thickness of control volumes
 !===============================================================================
-subroutine Depth_calculations(n, nn, wf, zf, thick, recipthick, partit, mesh)
+subroutine Depth_calculations(n, nn, wf, zf, thick, recipthick, myDim_nod2D, eDim_nod2D, nl, hnode, zbar_3d_n)
     use recom_config
-    use mod_mesh, only: t_mesh
-    use MOD_PARTIT, only: t_partit
-    use g_clock, only: wp
+    use o_param, only: wp
 
     implicit none
 
     ! Input parameters
-    type(t_partit), intent(inout),   target          :: partit
-    type(t_mesh)  , intent(inout),   target          :: mesh
-    integer       , intent(in)                       :: nn	    ! Total number of vertical nodes
-    integer       , intent(in)                       :: n           ! Current node
+    integer, intent(in)                       :: n           ! Current node
+    integer, intent(in)                       :: nn	    ! Total number of vertical nodes
+    integer, intent(in)                       :: myDim_nod2D, eDim_nod2D, nl
+    real(kind=WP), intent(in), dimension(:,:) :: hnode, zbar_3d_n
 
     ! Output arrays
-    real(kind=8), dimension(mesh%nl,5), intent(out)  :: wf          ! [m/day] Flux velocities at the border of the control volumes
-    real(kind=8), dimension(mesh%nl),   intent(out)  :: zf          ! [m] Depth of vertical fluxes
-    real(kind=8), dimension(mesh%nl-1), intent(out)  :: thick       ! [m] Distance between two nodes = layer thickness
-    real(kind=8), dimension(mesh%nl-1), intent(out)  :: recipthick  ! [1/m] Reciprocal thickness
+    real(kind=8), dimension(nl,5), intent(out)  :: wf          ! [m/day] Flux velocities at the border of the control volumes
+    real(kind=8), dimension(nl),   intent(out)  :: zf          ! [m] Depth of vertical fluxes
+    real(kind=8), dimension(nl-1), intent(out)  :: thick       ! [m] Distance between two nodes = layer thickness
+    real(kind=8), dimension(nl-1), intent(out)  :: recipthick  ! [1/m] Reciprocal thickness
 
     ! Local variables
-    integer                                          :: k           ! Layer index
-
-    integer, pointer                       :: myDim_nod2D, eDim_nod2D
-    real(kind=WP), dimension(:,:), pointer :: hnode
-    real(kind=WP), dimension(:,:), pointer :: zbar_3d_n
-
-    myDim_nod2D                                    => partit%myDim_nod2D
-    eDim_nod2D                                     => partit%eDim_nod2D
-    hnode(1:mesh%nl-1, 1:myDim_nod2D+eDim_nod2D)   => mesh%hnode(:,:)
-    zbar_3d_n(1:mesh%nl, 1:myDim_nod2D+eDim_nod2D) => mesh%zbar_3d_n(:,:)
+    integer                                     :: k           ! Layer index
 
 ! ======================================================================================
 !! zbar(nl) allocate the array for storing the standard depths (depth of layers)
