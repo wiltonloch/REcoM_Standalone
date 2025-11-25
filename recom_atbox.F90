@@ -3,25 +3,16 @@
 !     Initially the box model was part of module recom_ciso. Now it can be run also 
 !     without carbon isotopes (ciso==.false.)
 !     mbutzin, 2021-07-08
-
-!     Settings are copied from subroutine bio_fluxes,
-!     some of the following modules may be unnecessary here
-!     use REcoM_declarations
-!     use REcoM_LocVar
       use REcoM_GloVar
       use recom_config
       use recom_ciso
 
-    use mod_mesh
-    USE MOD_PARTIT
-    USE MOD_PARSUP
+      use mod_mesh, only: t_mesh, sparse_matrix
+      USE MOD_PARTIT, only: t_partit, com_struct
 
-    use g_config
-    use o_arrays
-    use g_comm_auto
-    use g_forcing_arrays
-    use g_support
-
+      use g_config, only: dt
+      use g_forcing_arrays, only: wp
+      use g_support, only: integrate_nod
       
       implicit none
       integer                           :: n, elem, elnodes(3),n1
@@ -29,8 +20,8 @@
                                            total_co2flux_13, &     ! (mol / s) carbon-13
                                            total_co2flux_14        ! (mol / s) radiocarbon
       real(kind=WP), parameter          :: mol_allatm = 1.7726e20  ! atmospheric inventory of all compounds (mol)
-    type(t_partit), intent(inout), target :: partit
-    type(t_mesh)  , intent(inout), target :: mesh
+      type(t_partit), intent(inout), target :: partit
+      type(t_mesh)  , intent(inout), target :: mesh
 
 #include "../associate_part_def.h"
 #include "../associate_mesh_def.h"
@@ -89,4 +80,3 @@
 
       return
     end subroutine recom_atbox
-
