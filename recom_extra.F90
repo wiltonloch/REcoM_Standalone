@@ -1,3 +1,43 @@
+module recom_extra
+    interface
+        subroutine Depth_calculations(n, nn, wf, zf, thick, recipthick, partit, mesh)
+            use mod_mesh, only: t_mesh
+            use MOD_PARTIT, only: t_partit
+
+            ! Input parameters
+            type(t_partit), intent(inout),   target          :: partit
+            type(t_mesh)  , intent(inout),   target          :: mesh
+            integer       , intent(in)                       :: nn	    ! Total number of vertical nodes
+            integer       , intent(in)                       :: n           ! Current node
+
+            ! Output arrays
+            real(kind=8), dimension(mesh%nl,5), intent(out)  :: wf          ! [m/day] Flux velocities at the border of the control volumes
+            real(kind=8), dimension(mesh%nl),   intent(out)  :: zf          ! [m] Depth of vertical fluxes
+            real(kind=8), dimension(mesh%nl-1), intent(out)  :: thick       ! [m] Distance between two nodes = layer thickness
+            real(kind=8), dimension(mesh%nl-1), intent(out)  :: recipthick  ! [1/m] Reciprocal thickness
+        end subroutine Depth_calculations
+
+        subroutine Cobeta(partit, mesh)
+            use mod_mesh, only: t_mesh
+            use MOD_PARTIT, only: t_partit
+
+            ! Input parameters
+            type(t_partit), intent(inout),   target          :: partit
+            type(t_mesh)  , intent(inout),   target          :: mesh
+        end subroutine Cobeta
+
+        subroutine krill_resp(n, partit, mesh)
+            use mod_mesh, only: t_mesh
+            use MOD_PARTIT, only: t_partit
+
+            ! Input parameters
+            integer                                          :: n
+            type(t_partit), intent(inout),   target          :: partit
+            type(t_mesh)  , intent(inout),   target          :: mesh
+        end subroutine krill_resp
+    end interface
+end module recom_extra
+
 !===============================================================================
 ! Subroutine for calculating flux-depth and thickness of control volumes
 !===============================================================================
