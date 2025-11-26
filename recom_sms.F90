@@ -15,23 +15,15 @@ subroutine REcoM_sms(n,Nn,state,thick,recipthick,SurfSR,sms,Temp, Sali_depth &
     use recom_config
     use recoM_ciso
     use recom_extra
-    use g_clock
 
-    use g_config
-    use MOD_MESH
-    use MOD_TRACER
-    use MOD_DYN
-    USE MOD_ICE
-    use o_ARRAYS
-    use o_PARAM
-    USE MOD_PARTIT
-    USE MOD_PARSUP
-
-    use g_forcing_arrays
-    use g_comm_auto
-    use mvars
-    use mdepth2press                                   
-    use gsw_mod_toolbox, only: gsw_sa_from_sp,gsw_ct_from_pt,gsw_rho
+    use g_clock, only: daynew
+    use g_config, only: dt, wp, kappa, mstep
+    use MOD_MESH, only: t_mesh, sparse_matrix
+    use MOD_TRACER, only: t_tracer
+    use MOD_DYN, only: t_dyn
+    USE MOD_ICE, only: t_ice
+    USE MOD_PARTIT, only: t_partit, com_struct
+    use mvars, only: vars_sprac
 
     implicit none
     type(t_dyn)   , intent(inout), target :: dynamics
@@ -7193,4 +7185,3 @@ function iron_chemistry(Fe, totalLigand, ligandStabConst)
 
   return
   end
-
