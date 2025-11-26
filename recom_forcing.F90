@@ -241,7 +241,7 @@ if (recom_debug .and. mype==0) print *, achar(27)//'[36m'//'     --> REcoM_sms'/
 
 !  call REcoM_sms(n, Nn, state, thick, recipthick, SurfSW, sms, Temp ,zF, PAR, mesh)
 
-  call REcoM_sms(n, Nn, state, thick, recipthick, SurfSW, sms, Temp, Sali_depth &
+  call REcoM_sms(n, Nn, state, thick, SurfSW, sms, Temp, Sali_depth &
         , CO2_watercolumn                                              & ! MOCSY [mol/m3]
         , pH_watercolumn                                               & ! MOCSY on total scale
         , pCO2_watercolumn                                             & ! MOCSY [uatm]
@@ -251,7 +251,7 @@ if (recom_debug .and. mype==0) print *, achar(27)//'[36m'//'     --> REcoM_sms'/
         , kspc_watercolumn                                             & ! DISS stoichiometric solubility product [mol^2/kg^2]
         , rhoSW_watercolumn                                            & ! DISS in-situ density of seawater [kg/m3]
         , Loc_slp                                                      &
-        , zF, PAR, Lond, Latd, partit, mesh)
+        , zF, PAR, Latd, partit, mesh)
 
   state(1:nn,:)      = max(tiny,state(1:nn,:) + sms(1:nn,:))
 

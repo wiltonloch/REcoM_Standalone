@@ -1,4 +1,4 @@
-subroutine REcoM_sms(n,Nn,state,thick,recipthick,SurfSR,sms,Temp, Sali_depth &
+subroutine REcoM_sms(n,Nn,state,thick,SurfSR,sms,Temp, Sali_depth &
         , CO2_watercolumn                                                    &
         , pH_watercolumn                                                     &
         , pCO2_watercolumn                                                   &
@@ -7,7 +7,7 @@ subroutine REcoM_sms(n,Nn,state,thick,recipthick,SurfSR,sms,Temp, Sali_depth &
         , OmegaC_watercolumn                                                 &
         , kspc_watercolumn                                                   &
         , rhoSW_watercolumn                                                  &
-        , Loc_slp, zF, PAR, Lond, Latd, partit, mesh)
+        , Loc_slp, zF, PAR, Latd, partit, mesh)
 
     use recom_declarations
     use recom_locvar
@@ -31,7 +31,6 @@ subroutine REcoM_sms(n,Nn,state,thick,recipthick,SurfSR,sms,Temp, Sali_depth &
                                                                                     !! should be in instead of inout
 
     real(kind=8),dimension(mesh%nl-1)                       :: thick                !< [m] Vertical distance between two nodes = Thickness 
-    real(kind=8),dimension(mesh%nl-1)                       :: recipthick           !< [1/m] reciprocal of thick
     real(kind=8),intent(in)                                 :: SurfSR               !< [W/m2] ShortWave radiation at surface
 
     real(kind=8),dimension(mesh%nl-1,bgc_num),intent(inout) :: sms                  !< Source-Minus-Sinks term
@@ -70,7 +69,6 @@ subroutine REcoM_sms(n,Nn,state,thick,recipthick,SurfSR,sms,Temp, Sali_depth &
     real(kind=8)                                            :: REcoM_Si_depth(1)
     real(kind=8)                                            :: REcoM_Phos_depth(1)
     real(kind=8),                      intent(in)           :: Latd(1)              ! latitude in degree
-    real(kind=8),                      intent(in)           :: Lond(1)              ! longitude in degree
     real(kind=8)                                            :: mocsy_step_per_day 
 
 ! --- Biogeochemical state variables ---
