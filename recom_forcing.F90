@@ -17,6 +17,7 @@ subroutine REcoM_Forcing(zNodes, n, Nn, state, SurfSW, Loc_slp, Temp, Sali, Sali
     use recom_config
     use recom_glovar
     use recom_extra
+    use recom_sms_module
     use gasx
     use recom_ciso
     use g_clock
@@ -241,17 +242,18 @@ if (recom_debug .and. mype==0) print *, achar(27)//'[36m'//'     --> REcoM_sms'/
 
 !  call REcoM_sms(n, Nn, state, thick, recipthick, SurfSW, sms, Temp ,zF, PAR, mesh)
 
-  call REcoM_sms(n, Nn, state, thick, SurfSW, sms, Temp, Sali_depth &
-        , CO2_watercolumn                                              & ! MOCSY [mol/m3]
-        , pH_watercolumn                                               & ! MOCSY on total scale
-        , pCO2_watercolumn                                             & ! MOCSY [uatm]
-        , HCO3_watercolumn                                             & ! MOCSY [mol/m3]
-        , CO3_watercolumn                                              & ! DISS [mol/m3]
-        , OmegaC_watercolumn                                           & ! DISS calcite saturation state
-        , kspc_watercolumn                                             & ! DISS stoichiometric solubility product [mol^2/kg^2]
-        , rhoSW_watercolumn                                            & ! DISS in-situ density of seawater [kg/m3]
-        , Loc_slp                                                      &
-        , zF, PAR, Latd, partit, mesh)
+  call REcoM_sms(n, Nn, state, thick, SurfSW, sms, Temp, Sali_depth, &
+                 CO2_watercolumn,                                                & ! MOCSY [mol/m3]
+                 pH_watercolumn,                                                 & ! MOCSY on total scale
+                 pCO2_watercolumn,                                               & ! MOCSY [uatm]
+                 HCO3_watercolumn,                                               & ! MOCSY [mol/m3]
+                 CO3_watercolumn,                                                & ! DISS [mol/m3]
+                 OmegaC_watercolumn,                                             & ! DISS calcite saturation state
+                 kspc_watercolumn,                                               & ! DISS stoichiometric solubility product [mol^2/kg^2]
+                 rhoSW_watercolumn,                                              & ! DISS in-situ density of seawater [kg/m3]
+                 Loc_slp,                                                        &
+                 zF, PAR, Latd, daynew, dt, kappa, mstep, partit%MPI_COMM_FESOM, &
+                 partit%mype, partit%myDim_nod2D, partit%eDim_nod2D, mesh%nl, mesh%geo_coord_nod2D)
 
   state(1:nn,:)      = max(tiny,state(1:nn,:) + sms(1:nn,:))
 

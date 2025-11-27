@@ -1,13 +1,57 @@
-subroutine REcoM_sms(n,Nn,state,thick,SurfSR,sms,Temp, Sali_depth &
-        , CO2_watercolumn                                                    &
-        , pH_watercolumn                                                     &
-        , pCO2_watercolumn                                                   &
-        , HCO3_watercolumn                                                   &
-        , CO3_watercolumn                                                    &
-        , OmegaC_watercolumn                                                 &
-        , kspc_watercolumn                                                   &
-        , rhoSW_watercolumn                                                  &
-        , Loc_slp, zF, PAR, Latd, partit, mesh)
+module recom_sms_module
+    interface
+        subroutine REcoM_sms(n, Nn, state, thick, SurfSR, sms, Temp, Sali_depth, CO2_watercolumn, &
+                             pH_watercolumn, pCO2_watercolumn, HCO3_watercolumn, CO3_watercolumn, &
+                             OmegaC_watercolumn, kspc_watercolumn, rhoSW_watercolumn, Loc_slp,    &
+                             zF, PAR, Latd, daynew, dt, kappa, mstep, MPI_COMM_FESOM, mype,       &
+                             myDim_nod2D, eDim_nod2D, nl, geo_coord_nod2D)
+
+            use recom_declarations
+            use recom_locvar
+            use recom_glovar
+            use recom_config
+            use recoM_ciso
+            use recom_extra
+            use g_config, only: wp
+            use mvars, only: vars_sprac
+
+            implicit none
+
+            integer, intent(in) :: n, daynew, mype, myDim_nod2D, eDim_nod2D, nl, mstep
+            integer, intent(in) :: MPI_COMM_FESOM
+            integer, intent(in) :: Nn                   !< Total number of nodes in the vertical
+
+            real(kind=8),  intent(in) :: SurfSR, dt  !< [W/m2] ShortWave radiation at surface
+            real(kind=8),  intent(in) :: Loc_slp     ![Pa] sea-level pressure
+            real(kind=8),  intent(in) :: Latd(1)     ! latitude in degree
+
+            real(kind=8),  intent(in),    dimension(nl - 1) :: thick           !< [m] Vertical distance between two nodes = Thickness 
+            real(kind=8),  intent(in),    dimension(nl - 1) :: Temp            !< [degrees C] Ocean temperature
+            real(kind=8),  intent(in),    dimension(nl - 1) :: Sali_depth      !< NEW MOCSY Salinity for the whole water column
+            real(kind=8),  intent(in),    dimension(nl)     :: zF              !< [m] Depth of fluxes
+            real(kind=WP), intent(in),    dimension(:,:)    :: geo_coord_nod2D
+
+            real(kind=8),  intent(inout)                             :: kappa
+            real(kind=8),  intent(inout), dimension(nl - 1)          :: CO2_watercolumn      !< [mol/m3]
+            real(kind=8),  intent(inout), dimension(nl - 1)          :: pH_watercolumn       !< on total scale
+            real(kind=8),  intent(inout), dimension(nl - 1)          :: pCO2_watercolumn     !< [uatm]
+            real(kind=8),  intent(inout), dimension(nl - 1)          :: HCO3_watercolumn     !< [mol/m3]
+            real(kind=8),  intent(inout), dimension(nl - 1)          :: CO3_watercolumn      !< [mol/m3]
+            real(kind=8),  intent(inout), dimension(nl - 1)          :: OmegaC_watercolumn   !< calcite saturation state
+            real(kind=8),  intent(inout), dimension(nl - 1)          :: kspc_watercolumn     !< stoichiometric solubility product [mol^2/kg^2]
+            real(kind=8),  intent(inout), dimension(nl - 1)          :: rhoSW_watercolumn    !< in-situ density of seawater [kg/m3]
+            real(kind=8),  intent(inout), dimension(nl - 1)          :: PAR
+            real(kind=8),  intent(inout), dimension(nl - 1, bgc_num) :: state                !< ChlA conc in phytoplankton [mg/m3]
+            real(kind=8),  intent(inout), dimension(nl - 1, bgc_num) :: sms                  !< Source-Minus-Sinks term
+        end subroutine
+    end interface
+end module
+
+subroutine REcoM_sms(n, Nn, state, thick, SurfSR, sms, Temp, Sali_depth, CO2_watercolumn, &
+                     pH_watercolumn, pCO2_watercolumn, HCO3_watercolumn, CO3_watercolumn, &
+                     OmegaC_watercolumn, kspc_watercolumn, rhoSW_watercolumn, Loc_slp,    &
+                     zF, PAR, Latd, daynew, dt, kappa, mstep, MPI_COMM_FESOM, mype,       &
+                     myDim_nod2D, eDim_nod2D, nl, geo_coord_nod2D)
 
     use recom_declarations
     use recom_locvar
@@ -15,61 +59,57 @@ subroutine REcoM_sms(n,Nn,state,thick,SurfSR,sms,Temp, Sali_depth &
     use recom_config
     use recoM_ciso
     use recom_extra
-
-    use g_clock, only: daynew
-    use g_config, only: dt, wp, kappa, mstep
-    use MOD_MESH, only: t_mesh
-    USE MOD_PARTIT, only: t_partit
+    use g_config, only: wp
     use mvars, only: vars_sprac
 
     implicit none
-    type(t_partit), intent(inout), target :: partit
-    type(t_mesh)  , intent(inout), target :: mesh
 
-    integer, intent(in)                                     :: Nn                   !< Total number of nodes in the vertical
-    real(kind=8),dimension(mesh%nl-1,bgc_num),intent(inout) :: state                !< ChlA conc in phytoplankton [mg/m3]
-                                                                                    !! should be in instead of inout
+    integer, intent(in) :: n, daynew, mype, myDim_nod2D, eDim_nod2D, nl, mstep
+    integer, intent(in) :: MPI_COMM_FESOM
+    integer, intent(in) :: Nn                   !< Total number of nodes in the vertical
 
-    real(kind=8),dimension(mesh%nl-1)                       :: thick                !< [m] Vertical distance between two nodes = Thickness 
-    real(kind=8),intent(in)                                 :: SurfSR               !< [W/m2] ShortWave radiation at surface
+    real(kind=8),  intent(in)    :: SurfSR, dt  !< [W/m2] ShortWave radiation at surface
+    real(kind=8),  intent(in)    :: Loc_slp     ![Pa] sea-level pressure
+    real(kind=8),  intent(in)    :: Latd(1)     ! latitude in degree
 
-    real(kind=8),dimension(mesh%nl-1,bgc_num),intent(inout) :: sms                  !< Source-Minus-Sinks term
-    real(kind=8),dimension(mesh%nl-1)        ,intent(in)    :: Temp                 !< [degrees C] Ocean temperature
-    real(kind=8),dimension(mesh%nl-1)        ,intent(in)    :: Sali_depth           !< NEW MOCSY Salinity for the whole water column
+    real(kind=8),  intent(in),    dimension(nl - 1) :: thick           !< [m] Vertical distance between two nodes = Thickness 
+    real(kind=8),  intent(in),    dimension(nl - 1) :: Temp            !< [degrees C] Ocean temperature
+    real(kind=8),  intent(in),    dimension(nl - 1) :: Sali_depth      !< NEW MOCSY Salinity for the whole water column
+    real(kind=8),  intent(in),    dimension(nl)   :: zF              !< [m] Depth of fluxes
+    real(kind=WP), intent(in),    dimension(:,:)  :: geo_coord_nod2D
 
-    Real(kind=8),dimension(mesh%nl-1),intent(inout)         :: CO2_watercolumn      !< [mol/m3]
-    Real(kind=8),dimension(mesh%nl-1),intent(inout)         :: pH_watercolumn       !< on total scale
-    Real(kind=8),dimension(mesh%nl-1),intent(inout)         :: pCO2_watercolumn     !< [uatm]
-    Real(kind=8),dimension(mesh%nl-1),intent(inout)         :: HCO3_watercolumn     !< [mol/m3]
-    Real(kind=8),dimension(mesh%nl-1),intent(inout)         :: CO3_watercolumn      !< [mol/m3]
-    Real(kind=8),dimension(mesh%nl-1),intent(inout)         :: OmegaC_watercolumn   !< calcite saturation state
-    Real(kind=8),dimension(mesh%nl-1),intent(inout)         :: kspc_watercolumn     !< stoichiometric solubility product [mol^2/kg^2]
-    Real(kind=8),dimension(mesh%nl-1),intent(inout)         :: rhoSW_watercolumn    !< in-situ density of seawater [kg/m3]
+    real(kind=8),  intent(inout)                          :: kappa
+    real(kind=8),  intent(inout), dimension(nl - 1)         :: CO2_watercolumn      !< [mol/m3]
+    real(kind=8),  intent(inout), dimension(nl - 1)         :: pH_watercolumn       !< on total scale
+    real(kind=8),  intent(inout), dimension(nl - 1)         :: pCO2_watercolumn     !< [uatm]
+    real(kind=8),  intent(inout), dimension(nl - 1)         :: HCO3_watercolumn     !< [mol/m3]
+    real(kind=8),  intent(inout), dimension(nl - 1)         :: CO3_watercolumn      !< [mol/m3]
+    real(kind=8),  intent(inout), dimension(nl - 1)         :: OmegaC_watercolumn   !< calcite saturation state
+    real(kind=8),  intent(inout), dimension(nl - 1)         :: kspc_watercolumn     !< stoichiometric solubility product [mol^2/kg^2]
+    real(kind=8),  intent(inout), dimension(nl - 1)         :: rhoSW_watercolumn    !< in-situ density of seawater [kg/m3]
+    real(kind=8),  intent(inout), dimension(nl - 1)         :: PAR
+    real(kind=8),  intent(inout), dimension(nl - 1, bgc_num) :: state                !< ChlA conc in phytoplankton [mg/m3]
+    real(kind=8),  intent(inout), dimension(nl - 1, bgc_num) :: sms                  !< Source-Minus-Sinks term
 
-    real(kind=8),dimension(mesh%nl)          ,intent(in)    :: zF                   !< [m] Depth of fluxes
-    real(kind=8),dimension(mesh%nl-1),intent(inout)         :: PAR
+    real(kind=8)                    :: dt_d                 !< Size of time steps [day]
+    real(kind=8)                    :: dt_b                 !< Size of time steps [day]
+    real(kind=8)                    :: dt_sink              !< Size of local time step
 
-    real(kind=8)                                            :: dt_d                 !< Size of time steps [day]
-    real(kind=8)                                            :: dt_b                 !< Size of time steps [day]
-    real(kind=8),dimension(mesh%nl-1)                       :: Sink
-    real(kind=8)                                            :: dt_sink              !< Size of local time step
+    real(kind=8)                    :: recip_hetN_plus      !< MB's addition to heterotrophic respiration
+    real(kind=8)                    :: recip_res_het        !< [day] Reciprocal of respiration by heterotrophs and mortality (loss to detritus)
+    real(kind=8)                    :: Sink_Vel
+    real(kind=8)                    :: aux
+    integer                         :: k,step,ii, idiags
 
-    real(kind=8)                                            :: recip_hetN_plus      !< MB's addition to heterotrophic respiration
-    real(kind=8)                                            :: recip_res_het        !< [day] Reciprocal of respiration by heterotrophs and mortality (loss to detritus)
-    real(kind=8)                                            :: Sink_Vel
-    real(kind=8)                                            :: aux
-    integer                                                 :: k,step,ii, idiags,n
-
-    real(kind=8),                      intent(in)           :: Loc_slp              ![Pa] sea-level pressure
-    real(kind=8)                                            :: Patm_depth(1)
-    real(kind=8)                                            :: REcoM_T_depth(1)     ! MOCSY temperature for the whole water column for mocsy minimum defined as -2
-    real(kind=8)                                            :: REcoM_S_depth(1)
-    real(kind=8)                                            :: REcoM_DIC_depth(1)
-    real(kind=8)                                            :: REcoM_Alk_depth(1)
-    real(kind=8)                                            :: REcoM_Si_depth(1)
-    real(kind=8)                                            :: REcoM_Phos_depth(1)
-    real(kind=8),                      intent(in)           :: Latd(1)              ! latitude in degree
-    real(kind=8)                                            :: mocsy_step_per_day 
+    real(kind=8)                    :: Patm_depth(1)
+    real(kind=8)                    :: REcoM_T_depth(1)     ! MOCSY temperature for the whole water column for mocsy minimum defined as -2
+    real(kind=8)                    :: REcoM_S_depth(1)
+    real(kind=8)                    :: REcoM_DIC_depth(1)
+    real(kind=8)                    :: REcoM_Alk_depth(1)
+    real(kind=8)                    :: REcoM_Si_depth(1)
+    real(kind=8)                    :: REcoM_Phos_depth(1)
+    real(kind=8)                    :: mocsy_step_per_day 
+    real(kind=8), dimension(nl - 1) :: Sink
 
 ! --- Biogeochemical state variables ---
 real(kind=8) :: &
@@ -116,9 +156,6 @@ real(kind=8) :: &
     DetZ2Calc, & ! [mmol/m3] Zooplankton detritus calcite
     MicZooN,   & ! [mmol/m3] Microzooplankton nitrogen
     MicZooC      ! [mmol/m3] Microzooplankton carbon
-
-    integer, pointer :: mype
-    mype => partit%mype
 
     ! ===========================================================================
     ! VARIABLE DECLARATIONS AND INITIALIZATION
@@ -3347,7 +3384,7 @@ real(kind=8) :: &
 
            ! Call detailed krill respiration subroutine
            ! Handles additional physiological processes (e.g., molting, reproduction)
-           call krill_resp(n, daynew, partit%myDim_nod2D, partit%eDim_nod2D, mesh%geo_coord_nod2D)
+           call krill_resp(n, daynew, myDim_nod2D, eDim_nod2D, geo_coord_nod2D)
 
            ! Calculate feeding success modifier
            ! Low feeding rates trigger stress response with elevated respiration
@@ -5250,7 +5287,7 @@ real(kind=8) :: &
                 print*,'grazingFlux_Cocco2: ', grazingFlux_Cocco2
                 print*,'grazingFlux_Cocco3: ', grazingFlux_Cocco3
                 print*,'recipQuota_cocco: ', recipQuota_cocco
-                call par_ex(partit%MPI_COMM_FESOM, partit%mype)
+                call par_ex(MPI_COMM_FESOM, mype)
                 stop
             endif
 
