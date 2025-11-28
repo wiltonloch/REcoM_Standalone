@@ -85,11 +85,15 @@ subroutine REcoM_Forcing(zNodes, n, Nn, state, SurfSW, Loc_slp, Temp, Sali, Sali
 
     integer                    :: tr_num
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
+    integer, pointer   :: mype
+    integer, pointer                :: myDim_nod2D, eDim_nod2D
+    real(kind=WP), dimension(:,:), pointer :: geo_coord_nod2D
 
+    mype            => partit%mype
+    myDim_nod2D     => partit%myDim_nod2D
+    eDim_nod2D      => partit%eDim_nod2D
+
+    geo_coord_nod2D(1:2,1:myDim_nod2D+eDim_nod2D)              => mesh%geo_coord_nod2D(:,:)
 
     tiny_N   = tiny_chl/chl2N_max   ! 0.00001/ 3.15d0   Chl2N_max [mg CHL/mmol N] Maximum CHL a : N ratio = 0.3 gCHL gN^-1
     tiny_N_d = tiny_chl/chl2N_max_d ! 0.00001/ 4.2d0
