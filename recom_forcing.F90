@@ -18,24 +18,17 @@ subroutine REcoM_Forcing(zNodes, n, Nn, state, SurfSW, Loc_slp, Temp, Sali, Sali
     use recom_glovar
     use recom_extra
     use recom_sms_module
-    use gasx
     use recom_ciso
-    use g_clock
-    use o_PARAM
-    use g_rotate_grid
-    use g_config
-    use mod_mesh
-    USE MOD_PARTIT
-    USE MOD_PARSUP
-    use mod_tracer
-    use MOD_DYN
-    use MOD_ICE
 
-    use o_param
-    use o_arrays
-    use g_forcing_arrays
-    use g_comm_auto
-    use g_support
+    use gasx
+    use g_clock, only: daynew, ndpyr
+    use g_config, only: dt, wp, kappa, mstep, rad
+    use mod_mesh, only: t_mesh, sparse_matrix
+    USE MOD_PARTIT, only: t_partit, com_struct
+    use mod_tracer, only: t_tracer
+    use MOD_DYN, only: t_dyn
+    use MOD_ICE, only: t_ice
+
     implicit none
 
     type(t_dyn)   , intent(inout), target :: dynamics
