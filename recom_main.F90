@@ -22,15 +22,15 @@ end module
 
 module bio_fluxes_interface
     interface
-        subroutine bio_fluxes(tracers, partit, mesh)
-            use mod_mesh, only: t_mesh
-            use MOD_PARTIT, only: t_partit
-            use mod_tracer, only: t_tracer
+        subroutine bio_fluxes(alkalinity, MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D, ocean_area, ulevels_nod2D, areasvol)
+            use g_config, only: wp
 
-            type(t_tracer), intent(inout), target :: tracers
-            type(t_partit), intent(inout), target :: partit
-            type(t_mesh), intent(inout), target :: mesh
+            integer, intent(in)               :: MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D
+            integer, intent(in), dimension(:) :: ulevels_nod2D
 
+            real(kind=WP), intent(in)                 :: ocean_area
+            real(kind=WP), intent(in), dimension(:,:) :: areasvol
+            real(kind=WP), intent(in), dimension(:,:) :: alkalinity
       end subroutine
     end interface
 end module
@@ -124,7 +124,9 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
     !< alkalinity restoring to climatology
     !< virtual flux is possible
 
-    if (restore_alkalinity) call bio_fluxes(tracers, partit, mesh)
+    if (restore_alkalinity) call bio_fluxes(tracers%data(2+ialk)%values(:,:), partit%MPI_COMM_FESOM, &
+                                            partit%myDim_nod2D, partit%eDim_nod2D, mesh%ocean_area,  &
+                                            mesh%ulevels_nod2D, mesh%areasvol)
     if (recom_debug .and. mype==0) print *, achar(27)//'[36m'//'     --> bio_fluxes'//achar(27)//'[0m'
 
   if (use_atbox) then    ! MERGE
@@ -620,31 +622,26 @@ end subroutine recom
 ! ======================================================================================
 ! Alkalinity restoring to climatology                                 	     
 ! ======================================================================================
-subroutine bio_fluxes(tracers, partit, mesh)
-
+subroutine bio_fluxes(alkalinity, MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D, ocean_area, ulevels_nod2D, areasvol)
     use recom_declarations
     use recom_locvar
     use recom_glovar
     use recom_config
     use recom_extra, only: integrate_nod_2d_recom
-
-    use mod_mesh, only: t_mesh
-    use MOD_PARTIT, only: t_partit
-    use mod_tracer, only: t_tracer
     use g_config, only: wp
 
     implicit none
-    integer                               :: n, elem, elnodes(3),n1
-    real(kind=WP)                         :: ralk, net
 
-    type(t_tracer), intent(inout), target :: tracers
-    type(t_partit), intent(inout), target :: partit
-    type(t_mesh)  , intent(inout), target :: mesh
+    integer, intent(in)               :: MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D
+    integer, intent(in), dimension(:) :: ulevels_nod2D
 
-    !___________________________________________________________________________
-    real(kind=WP), dimension(:,:), pointer :: alkalinity
+    real(kind=WP), intent(in)                 :: ocean_area
+    real(kind=WP), intent(in), dimension(:,:) :: areasvol
+    real(kind=WP), intent(in), dimension(:,:) :: alkalinity
 
-    alkalinity => tracers%data(2+ialk)%values(:,:) ! 1 temp, 2 salt, 3 din, 4 dic, 5 alk
+    integer       :: n, elem, elnodes(3), n1
+    real(kind=WP) :: ralk, net
+
 !___________________________________________________________________
 ! on freshwater inflow/outflow or virtual alkalinity:
   ! 1. In zlevel & zstar the freshwater flux is applied in the update of the 
@@ -671,7 +668,7 @@ subroutine bio_fluxes(tracers, partit, mesh)
 
     !___________________________________________________________________________
     ! Balance alkalinity restoring to climatology
-    do n=1, partit%myDim_nod2D + partit%eDim_nod2D
+    do n=1, myDim_nod2D + eDim_nod2D
 !        relax_alk(n)=surf_relax_Alk * (Alk_surf(n) - tracers%data(2+ialk)%values(1, n)) 
 !        relax_alk(n)=surf_relax_Alk * (Alk_surf(n) - alkalinity(ulevels_nod2d(n),n)
         relax_alk(n)=surf_relax_Alk * (Alk_surf(n) - alkalinity(1, n))
@@ -685,8 +682,8 @@ subroutine bio_fluxes(tracers, partit, mesh)
 
 
   ! 3. restoring to Alkalinity climatology
-    call integrate_nod_2D_recom(relax_alk, net, partit%MPI_COMM_FESOM, partit%myDim_nod2D, partit%eDim_nod2D, mesh%ulevels_nod2D, mesh%areasvol)
+    call integrate_nod_2D_recom(relax_alk, net, MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D, ulevels_nod2D, areasvol)
 
-    relax_alk = relax_alk - net / mesh%ocean_area  ! at ocean surface layer
+    relax_alk = relax_alk - net / ocean_area  ! at ocean surface layer
 
 end subroutine bio_fluxes
