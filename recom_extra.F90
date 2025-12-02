@@ -28,6 +28,17 @@ module recom_extra
             integer, intent(in)                       :: myDim_nod2D, eDim_nod2D
             real(kind=WP), intent(in), dimension(:,:) :: geo_coord_nod2D
         end subroutine krill_resp
+
+        subroutine integrate_nod_2D_recom(data, int2D, partit, mesh)
+          USE MOD_PARTIT
+          USE MOD_MESH
+
+          IMPLICIT NONE
+          type(t_mesh),  intent(in),    target :: mesh
+          type(t_partit),intent(inout), target :: partit
+          real(kind=WP), intent(in)         :: data(:)
+          real(kind=WP), intent(inout)      :: int2D
+        end subroutine
     end interface
 end module recom_extra
 
@@ -202,3 +213,39 @@ subroutine krill_resp(n, daynew, myDim_nod2D, eDim_nod2D, geo_coord_nod2D)
       end if
    endif
  end subroutine krill_resp
+
+
+subroutine integrate_nod_2D_recom(data, int2D, partit, mesh)
+    USE MOD_PARTIT, only: t_partit, com_struct, mpi_sum, mpi_double_precision
+    USE MOD_MESH, only: t_mesh, wp, sparse_matrix
+
+    IMPLICIT NONE
+    type(t_mesh),  intent(in),    target :: mesh
+    type(t_partit),intent(inout), target :: partit
+    real(kind=WP), intent(in)         :: data(:)
+    real(kind=WP), intent(inout)      :: int2D
+
+    integer       :: row
+    real(kind=WP) :: lval
+
+    integer, pointer :: MPI_COMM_FESOM
+    integer, pointer :: MPIERR
+    integer, pointer :: myDim_nod2D, eDim_nod2D
+    integer,       dimension(:)  , pointer :: ulevels_nod2D
+    real(kind=WP), dimension(:,:), pointer :: areasvol
+
+    MPI_COMM_FESOM  => partit%MPI_COMM_FESOM
+    myDim_nod2D     => partit%myDim_nod2D
+    eDim_nod2D      => partit%eDim_nod2D
+    ulevels_nod2D(1:myDim_nod2D+eDim_nod2D) => mesh%ulevels_nod2D(:)
+    areasvol(1:mesh%nl,1:myDim_nod2d+eDim_nod2D) => mesh%areasvol(:,:)
+
+    lval=0.0_WP
+    do row=1, myDim_nod2D
+       lval=lval+data(row)*areasvol(ulevels_nod2D(row),row)
+    end do
+
+    int2D=0.0_WP
+    call MPI_AllREDUCE(lval, int2D, 1, MPI_DOUBLE_PRECISION, MPI_SUM, &
+                       MPI_COMM_FESOM, MPIerr)
+end subroutine integrate_nod_2D_recom
