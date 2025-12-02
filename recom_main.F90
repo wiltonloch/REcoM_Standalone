@@ -649,6 +649,7 @@ subroutine bio_fluxes(tracers, partit, mesh)
     use g_comm_auto
     use g_forcing_arrays
     use g_support
+    use recom_extra, only: integrate_nod_2d_recom
 
     implicit none
     integer                               :: n, elem, elnodes(3),n1
@@ -707,7 +708,7 @@ subroutine bio_fluxes(tracers, partit, mesh)
 
 
   ! 3. restoring to Alkalinity climatology
-    call integrate_nod(relax_alk, net, partit, mesh)
+    call integrate_nod_2D_recom(relax_alk, net, partit, mesh)
 
     relax_alk=relax_alk-net/ocean_area  ! at ocean surface layer
 

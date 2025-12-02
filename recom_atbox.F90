@@ -9,6 +9,7 @@
 
       use mod_mesh, only: t_mesh
       USE MOD_PARTIT, only: t_partit
+      use recom_extra, only: integrate_nod_2d_recom
 
       use g_config, only: dt
       use g_forcing_arrays, only: wp
@@ -25,7 +26,7 @@
 
 !     Globally integrated air-sea CO2 flux (mol / s)
       total_co2flux    = 0.
-      call integrate_nod(0.001 * GloCO2flux_seaicemask   , total_CO2flux,  partit,  mesh)
+      call integrate_nod_2d_recom(0.001 * GloCO2flux_seaicemask   , total_CO2flux,  partit,  mesh)
 
 !     Atmospheric carbon budget (mol)
 !     mass of the dry atmosphere = 5.1352e18 kg (Trenberth & Smith 2005, doi:10.1175/JCLI-3299.1)
@@ -42,7 +43,7 @@
 
 !       Globally integrated air-sea 13CO2 flux (mol / s)
         total_co2flux_13 = 0.
-        call integrate_nod(0.001 * GloCO2flux_seaicemask_13, total_co2flux_13, partit, mesh)
+        call integrate_nod_2d_recom(0.001 * GloCO2flux_seaicemask_13, total_co2flux_13, partit, mesh)
 
 !       Atmospheric carbon-13 budget (mol)
 !       mol_co2atm_13 = mol_co2atm_13 - total_co2flux_13 * dt 
@@ -53,7 +54,7 @@
 
         if (ciso_14) then
           total_co2flux_14   = 0.  ! globally integrated air-sea 14CO2 flux (mol / s)
-          call integrate_nod(0.001 * GloCO2flux_seaicemask_14, total_co2flux_14, partit, mesh)
+          call integrate_nod_2d_recom(0.001 * GloCO2flux_seaicemask_14, total_co2flux_14, partit, mesh)
 !         Atmospheric radiocarbon budget in mol:
 !         mol_co2atm_14 = mol_co2atm_14  + dt * (cosmic_14(1) - mol_co2atm_14 * lambda_14 - total_co2flux_14)
 !                       = (mol_co2atm_14  + dt * (cosmic_14(1) - total_co2flux_14)) / (1 + lambda_14 * dt)
