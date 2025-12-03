@@ -131,7 +131,9 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
 
   if (use_atbox) then    ! MERGE
 ! Prognostic atmospheric isoCO2
-    call recom_atbox(partit,mesh)
+    call recom_atbox(partit, mesh, partit%MPI_COMM_FESOM, partit%myDim_nod2D, &
+                     partit%eDim_nod2D, mesh%ocean_area, mesh%ulevels_nod2D,  &
+                     mesh%areasvol)
 !   optional I/O of isoCO2 and inferred cosmogenic 14C production; this may cost some CPU time
     if (ciso .and. ciso_14) then
       call annual_event(do_update)
