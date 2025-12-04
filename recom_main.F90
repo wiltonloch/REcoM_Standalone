@@ -22,27 +22,15 @@ end module
 
 module bio_fluxes_interface
     interface
-        subroutine bio_fluxes(tracers, partit, mesh)
-            use recom_declarations
-            use recom_locvar
-            use recom_glovar
-            use recom_config
+        subroutine bio_fluxes(alkalinity, MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D, ocean_area, ulevels_nod2D, areasvol)
+            use g_config, only: wp
 
-            use mod_mesh
-            use MOD_PARTIT
-            use MOD_PARSUP
-            use mod_tracer
+            integer, intent(in)               :: MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D
+            integer, intent(in), dimension(:) :: ulevels_nod2D
 
-            use g_config
-            use o_arrays
-            use g_comm_auto
-            use g_forcing_arrays
-            use g_support
-
-            type(t_tracer), intent(inout), target :: tracers
-            type(t_partit), intent(inout), target :: partit
-            type(t_mesh), intent(inout), target :: mesh
-
+            real(kind=WP), intent(in)                 :: ocean_area
+            real(kind=WP), intent(in), dimension(:,:) :: areasvol
+            real(kind=WP), intent(in), dimension(:,:) :: alkalinity
       end subroutine
     end interface
 end module
@@ -67,6 +55,7 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
     use g_clock
     use g_forcing_arrays, only: press_air, u_wind, v_wind, shortwave
     use g_comm_auto
+    use recom_forcing_module
 
     implicit none
 
@@ -135,12 +124,16 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
     !< alkalinity restoring to climatology
     !< virtual flux is possible
 
-    if (restore_alkalinity) call bio_fluxes(tracers, partit, mesh)
+    if (restore_alkalinity) call bio_fluxes(tracers%data(2+ialk)%values(:,:), partit%MPI_COMM_FESOM, &
+                                            partit%myDim_nod2D, partit%eDim_nod2D, mesh%ocean_area,  &
+                                            mesh%ulevels_nod2D, mesh%areasvol)
     if (recom_debug .and. mype==0) print *, achar(27)//'[36m'//'     --> bio_fluxes'//achar(27)//'[0m'
 
   if (use_atbox) then    ! MERGE
 ! Prognostic atmospheric isoCO2
-    call recom_atbox(partit,mesh)
+    call recom_atbox(partit, mesh, partit%MPI_COMM_FESOM, partit%myDim_nod2D, &
+                     partit%eDim_nod2D, mesh%ocean_area, mesh%ulevels_nod2D,  &
+                     mesh%areasvol)
 !   optional I/O of isoCO2 and inferred cosmogenic 14C production; this may cost some CPU time
     if (ciso .and. ciso_14) then
       call annual_event(do_update)
@@ -380,16 +373,18 @@ endif
 
 ! ======================================================================================
 !******************************** RECOM FORCING ****************************************
-        call REcoM_Forcing(zr, n, nzmax, C, SW, Loc_slp, Temp, Sali, Sali_depth &
-           , CO2_watercolumn                                     & ! NEW MOCSY CO2 for the whole watercolumn
-           , pH_watercolumn                                      & ! NEW MOCSY pH for the whole watercolumn
-           , pCO2_watercolumn                                    & ! NEW MOCSY pCO2 for the whole watercolumn
-           , HCO3_watercolumn                                    & ! NEW MOCSY HCO3 for the whole watercolumn
-           , CO3_watercolumn                                     & ! NEW DISS CO3 for the whole watercolumn
-           , OmegaC_watercolumn                                  & ! NEW DISS OmegaC for the whole watercolumn
-           , kspc_watercolumn                                    & ! NEW DISS stoichiometric solubility product for calcite [mol^2/kg^2]
-           , rhoSW_watercolumn                                   & ! NEW DISS in-situ density of seawater [mol/m^3]
-                           , PAR, ice, dynamics, tracers, partit, mesh)
+        call REcoM_Forcing(n, nzmax, C, SW, Loc_slp, Temp, Sali, Sali_depth, &
+                           CO2_watercolumn,         & ! NEW MOCSY CO2 for the whole watercolumn
+                           pH_watercolumn,          & ! NEW MOCSY pH for the whole watercolumn
+                           pCO2_watercolumn,        & ! NEW MOCSY pCO2 for the whole watercolumn
+                           HCO3_watercolumn,        & ! NEW MOCSY HCO3 for the whole watercolumn
+                           CO3_watercolumn,         & ! NEW DISS CO3 for the whole watercolumn
+                           OmegaC_watercolumn,      & ! NEW DISS OmegaC for the whole watercolumn
+                           kspc_watercolumn,        & ! NEW DISS stoichiometric solubility product for calcite [mol^2/kg^2]
+                           rhoSW_watercolumn,       & ! NEW DISS in-situ density of seawater [mol/m^3]
+                           PAR, partit%MPI_COMM_FESOM, partit%mype, partit%myDim_nod2D, &
+                           partit%eDim_nod2D, mesh%nl, mesh%hnode, mesh%zbar_3d_n,    &
+                           mesh%geo_coord_nod2D, daynew, ndpyr, dt, kappa, mstep, rad)
 
         do tr_num = num_tracers-bgc_num+1, num_tracers !bgc_num+2
             tracers%data(tr_num)%values(1:nzmax, n) = C(1:nzmax, tr_num-2)
@@ -629,41 +624,26 @@ end subroutine recom
 ! ======================================================================================
 ! Alkalinity restoring to climatology                                 	     
 ! ======================================================================================
-subroutine bio_fluxes(tracers, partit, mesh)
-
+subroutine bio_fluxes(alkalinity, MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D, ocean_area, ulevels_nod2D, areasvol)
     use recom_declarations
     use recom_locvar
     use recom_glovar
     use recom_config
-
-    use mod_mesh
-    use MOD_PARTIT
-    use MOD_PARSUP
-    use mod_tracer
-
-    use g_config
-    use o_arrays
-    use g_comm_auto
-    use g_forcing_arrays
-    use g_support
+    use recom_extra, only: integrate_nod_2d_recom
+    use g_config, only: wp
 
     implicit none
-    integer                               :: n, elem, elnodes(3),n1
-    real(kind=WP)                         :: ralk, net
 
-    type(t_tracer), intent(inout), target :: tracers
-    type(t_partit), intent(inout), target :: partit
-    type(t_mesh)  , intent(inout), target :: mesh
+    integer, intent(in)               :: MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D
+    integer, intent(in), dimension(:) :: ulevels_nod2D
 
-    !___________________________________________________________________________
-    real(kind=WP), dimension(:,:), pointer :: alkalinity
+    real(kind=WP), intent(in)                 :: ocean_area
+    real(kind=WP), intent(in), dimension(:,:) :: areasvol
+    real(kind=WP), intent(in), dimension(:,:) :: alkalinity
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
+    integer       :: n, elem, elnodes(3), n1
+    real(kind=WP) :: ralk, net
 
-    alkalinity => tracers%data(2+ialk)%values(:,:) ! 1 temp, 2 salt, 3 din, 4 dic, 5 alk
 !___________________________________________________________________
 ! on freshwater inflow/outflow or virtual alkalinity:
   ! 1. In zlevel & zstar the freshwater flux is applied in the update of the 
@@ -690,7 +670,7 @@ subroutine bio_fluxes(tracers, partit, mesh)
 
     !___________________________________________________________________________
     ! Balance alkalinity restoring to climatology
-    do n=1, myDim_nod2D+eDim_nod2D
+    do n=1, myDim_nod2D + eDim_nod2D
 !        relax_alk(n)=surf_relax_Alk * (Alk_surf(n) - tracers%data(2+ialk)%values(1, n)) 
 !        relax_alk(n)=surf_relax_Alk * (Alk_surf(n) - alkalinity(ulevels_nod2d(n),n)
         relax_alk(n)=surf_relax_Alk * (Alk_surf(n) - alkalinity(1, n))
@@ -704,8 +684,8 @@ subroutine bio_fluxes(tracers, partit, mesh)
 
 
   ! 3. restoring to Alkalinity climatology
-    call integrate_nod(relax_alk, net, partit, mesh)
+    call integrate_nod_2D_recom(relax_alk, net, MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D, ulevels_nod2D, areasvol)
 
-    relax_alk=relax_alk-net/ocean_area  ! at ocean surface layer
+    relax_alk = relax_alk - net / ocean_area  ! at ocean surface layer
 
 end subroutine bio_fluxes

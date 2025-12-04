@@ -1,40 +1,73 @@
+module recom_extra
+    interface
+        subroutine Depth_calculations(n, nn, wf, zf, thick, recipthick, myDim_nod2D, eDim_nod2D, nl, hnode, zbar_3d_n)
+            use o_param, only: wp
+
+            ! Input parameters
+            integer, intent(in)                        :: n           ! Current node
+            integer, intent(in)                        :: nn	    ! Total number of vertical nodes
+            integer, intent(in)                        :: myDim_nod2D, eDim_nod2D, nl
+            real(kind=WP), intent(in), dimension(:,:)  :: hnode, zbar_3d_n
+
+            ! Output arrays
+            real(kind=8), dimension(nl,5), intent(out) :: wf          ! [m/day] Flux velocities at the border of the control volumes
+            real(kind=8), dimension(nl),   intent(out) :: zf          ! [m] Depth of vertical fluxes
+            real(kind=8), dimension(nl-1), intent(out) :: thick       ! [m] Distance between two nodes = layer thickness
+            real(kind=8), dimension(nl-1), intent(out) :: recipthick  ! [1/m] Reciprocal thickness
+        end subroutine Depth_calculations
+
+        subroutine Cobeta(daynew, ndpyr, myDim_nod2D, eDim_nod2D, geo_coord_nod2D)
+            use o_PARAM, only: wp
+            integer, intent(in)                       :: daynew, ndpyr, myDim_nod2D, eDim_nod2D
+            real(kind=WP), intent(in), dimension(:,:) :: geo_coord_nod2D
+        end subroutine Cobeta
+
+        subroutine krill_resp(n, daynew, myDim_nod2D, eDim_nod2D, geo_coord_nod2D)
+            use o_PARAM, only: wp
+            integer, intent(in)                       :: n, daynew
+            integer, intent(in)                       :: myDim_nod2D, eDim_nod2D
+            real(kind=WP), intent(in), dimension(:,:) :: geo_coord_nod2D
+        end subroutine krill_resp
+
+        subroutine integrate_nod_2D_recom(data, int2D, MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D, ulevels_nod2D, areasvol)
+            use g_config, only: wp
+
+            implicit none
+
+            integer,       intent(in)    :: MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D
+            real(kind=WP), intent(inout) :: int2D
+
+            integer,       intent(in), dimension(:)   :: ulevels_nod2D
+            real(kind=WP), intent(in), dimension(:)   :: data
+            real(kind=WP), intent(in), dimension(:,:) :: areasvol
+        end subroutine
+    end interface
+end module recom_extra
+
 !===============================================================================
 ! Subroutine for calculating flux-depth and thickness of control volumes
 !===============================================================================
-subroutine Depth_calculations(n, nn, wf, zf, thick, recipthick, partit, mesh)
+subroutine Depth_calculations(n, nn, wf, zf, thick, recipthick, myDim_nod2D, eDim_nod2D, nl, hnode, zbar_3d_n)
     use recom_config
-    use mod_mesh
-    use MOD_PARTIT
-    use MOD_PARSUP
-    use o_PARAM
-    use o_ARRAYS
-    use g_CONFIG
-    use g_forcing_arrays
-    use g_comm_auto
-    use g_clock
-    use g_rotate_grid
+    use o_param, only: wp
 
     implicit none
 
     ! Input parameters
-    type(t_partit), intent(inout),   target          :: partit
-    type(t_mesh)  , intent(inout),   target          :: mesh
-    integer       , intent(in)                       :: nn	    ! Total number of vertical nodes
-    integer       , intent(in)                       :: n           ! Current node
+    integer, intent(in)                       :: n           ! Current node
+    integer, intent(in)                       :: nn	    ! Total number of vertical nodes
+    integer, intent(in)                       :: myDim_nod2D, eDim_nod2D, nl
+    real(kind=WP), intent(in), dimension(:,:) :: hnode, zbar_3d_n
 
     ! Output arrays
-    real(kind=8), dimension(mesh%nl,5), intent(out)  :: wf          ! [m/day] Flux velocities at the border of the control volumes
-    real(kind=8), dimension(mesh%nl),   intent(out)  :: zf          ! [m] Depth of vertical fluxes
-    real(kind=8), dimension(mesh%nl-1), intent(out)  :: thick       ! [m] Distance between two nodes = layer thickness
-    real(kind=8), dimension(mesh%nl-1), intent(out)  :: recipthick  ! [1/m] Reciprocal thickness
+    real(kind=8), dimension(nl,5), intent(out)  :: wf          ! [m/day] Flux velocities at the border of the control volumes
+    real(kind=8), dimension(nl),   intent(out)  :: zf          ! [m] Depth of vertical fluxes
+    real(kind=8), dimension(nl-1), intent(out)  :: thick       ! [m] Distance between two nodes = layer thickness
+    real(kind=8), dimension(nl-1), intent(out)  :: recipthick  ! [1/m] Reciprocal thickness
 
     ! Local variables
-    integer                                          :: k           ! Layer index
+    integer                                     :: k           ! Layer index
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
 ! ======================================================================================
 !! zbar(nl) allocate the array for storing the standard depths (depth of layers)
 !! zbar is negative 
@@ -92,20 +125,11 @@ end subroutine Depth_calculations
 !===============================================================================
 ! Subroutine for calculating cos(AngleOfIncidence)
 !===============================================================================
-subroutine Cobeta(partit, mesh)
+subroutine Cobeta(daynew, ndpyr, myDim_nod2D, eDim_nod2D, geo_coord_nod2D)
     use REcoM_GloVar
-    use g_clock
-    use mod_mesh
-    use MOD_PARTIT
-    use MOD_PARSUP
-    use o_PARAM
-    use g_comm_auto
+    use o_PARAM, only: wp, pi
 
     implicit none
-  	
-    ! Input parameters
-    type(t_partit), intent(inout),   target          :: partit
-    type(t_mesh)  , intent(inout),   target          :: mesh
 
     ! Local variables
     real(kind=8)                                     :: yearfrac              ! Fraction of year [0 1]
@@ -117,10 +141,8 @@ subroutine Cobeta(partit, mesh)
     ! Constants
     real(kind=8), parameter                          :: nWater        = 1.33  ! Refractive indices of water
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
+    integer, intent(in)                       :: daynew, ndpyr, myDim_nod2D, eDim_nod2D
+    real(kind=WP), intent(in), dimension(:,:) :: geo_coord_nod2D
 
 !! find day (****NOTE for year starting in winter*****)  
 !! Paltridge, G. W. and C. M. R. Platt, Radiative Processes 
@@ -152,29 +174,19 @@ end subroutine Cobeta
 !================================================================================
 ! Calculating second zooplankton respiration rates
 !================================================================================
- subroutine krill_resp(n, partit, mesh)
+subroutine krill_resp(n, daynew, myDim_nod2D, eDim_nod2D, geo_coord_nod2D)
     use REcoM_declarations
     use REcoM_LocVar
     use REcoM_GloVar
-    use g_clock
-    use o_PARAM
-    use mod_mesh
-    use MOD_PARTIT
-    use MOD_PARSUP
-    use g_comm_auto
+    use o_PARAM, only: wp
 
     implicit none
 
     ! Input parameters
-    integer                                          :: n
-    type(t_partit), intent(inout),   target          :: partit
-    type(t_mesh)  , intent(inout),   target          :: mesh
+    integer, intent(in)                       :: n, daynew
+    integer, intent(in)                       :: myDim_nod2D, eDim_nod2D
+    real(kind=WP), intent(in), dimension(:,:) :: geo_coord_nod2D
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
- 
    ! Values from FESOM                                                                                                 
 
    if (geo_coord_nod2D(2,n)<0.0_WP) then  !SH
@@ -203,3 +215,30 @@ end subroutine Cobeta
       end if
    endif
  end subroutine krill_resp
+
+
+subroutine integrate_nod_2D_recom(data, int2D, MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D, ulevels_nod2D, areasvol)
+    use g_config, only: wp
+    use mpi
+
+    implicit none
+
+    integer,       intent(in)    :: MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D
+    real(kind=WP), intent(inout) :: int2D
+
+    integer,       intent(in), dimension(:)   :: ulevels_nod2D
+    real(kind=WP), intent(in), dimension(:)   :: data
+    real(kind=WP), intent(in), dimension(:,:) :: areasvol
+
+    integer       :: row, MPIERR
+    real(kind=WP) :: lval
+
+    lval = 0.0_WP
+    do row = 1, myDim_nod2D
+       lval = lval + data(row) * areasvol(ulevels_nod2D(row), row)
+    end do
+
+    int2D = 0.0_WP
+    call MPI_Allreduce(lval, int2D, 1, MPI_DOUBLE_PRECISION, MPI_SUM, &
+                       MPI_COMM_FESOM, MPIerr)
+end subroutine integrate_nod_2D_recom
