@@ -53,7 +53,7 @@ module recom_config
 !=============================================================================
 
   Integer :: ivphy = 1, ivdia = 2, ivdet = 3, ivdetsc = 4, ivcoc = 5, ivpha = 6
- 
+
 !=============================================================================
 
   integer, dimension(8)  :: recom_remin_tracer_id   = (/1001, 1002, 1003, 1018, 1019, 1022, 1302, 1402/)
@@ -389,7 +389,7 @@ module recom_config
 !! *** Phytoplankton C ***
   Real(kind=8)                 :: lossC         = 0.10d0          ! [1/day] Phytoplankton loss of carbon 
   Real(kind=8)                 :: lossC_d       = 0.10d0
-  Real(kind=8)                 :: lossC_c       = 0.10d0          
+  Real(kind=8)                 :: lossC_c       = 0.10d0
   Real(kind=8)                 :: lossC_p       = 0.10d0          ! Phaeocystis
   namelist /paphytoplankton_C/ lossC, lossC_d, lossC_c, lossC_p
 !!------------------------------------------------------------------------------
@@ -1124,7 +1124,7 @@ Module REcoM_declarations
   Real(kind=8)  :: rTref                  ! [1/K] Reciproque value of reference temp for Arrhenius function
   Real(kind=8)  :: rTloc                  ! [1/K] Reciproque of local ocean temp
   Real(kind=8)  :: arrFunc                ! []    Temp dependence of rates (also for Phaeocystis)
-  Real(kind=8)  :: CoccoTFunc
+  Real(kind=8)  :: CoccoTFunc             ! []    Temp dependence of coccolithophores
   Real(kind=8)  :: Temp_diatoms           ! []    Temp dependence of diatoms
   Real(kind=8)  :: Temp_phyto             ! []    Temp dependence of small phyto
   Real(kind=8)  :: Temp_cocco             ! []    Temp dependence of coccolithophores
@@ -1183,7 +1183,7 @@ Module REcoM_declarations
   Real(kind=8)  :: Cphot, Cphot_dia, Cphot_cocco, Cphot_phaeo         ! [1/day] C-specific rate of photosynthesis
 !!------------------------------------------------------------------------------
 !! *** Assimilation ***
-  Real(kind=8)  :: V_cm                                                     ! scaling factor for temperature dependent maximum of C-specific N-uptake
+  Real(kind=8)  :: V_cm                                               ! scaling factor for temperature dependent maximum of C-specific N-uptake
   Real(kind=8)  :: limitFacN,limitFacN_dia,limitFacN_cocco, limitFacN_phaeo ! Factor that regulates N-assimilation. Calc from function recom_limiter
   Real(kind=8)  :: limitFacSi
   Real(kind=8)  :: N_assim, N_assim_dia, N_assim_Cocco, N_assim_phaeo       ! [mmol N/(mmol C * day)] C specific N utilization rate
@@ -1232,7 +1232,7 @@ Module REcoM_declarations
      Real(kind=8)  :: MicZooNsq2                         ! NEW Zoo3
      Real(kind=8)  :: varpzMicZoo2, fMicZooN2            ! NEW Zoo3
      Real(kind=8)  :: food2, foodsq2                     ! [(mmol N)2/m6]
-     Real(kind=8)  :: grazingFlux_phy2, grazingFlux_Dia2, grazingFlux_Cocco2, grazingFlux_Phaeo2, grazingFlux_het2 ! [mmol N / (m3 * day)  (NEW changed term) 
+     Real(kind=8)  :: grazingFlux_phy2, grazingFlux_Dia2, grazingFlux_Cocco2, grazingFlux_Phaeo2, grazingFlux_het2 ! [mmol N / (m3 * day)  (NEW changed term)
      Real(kind=8)  :: grazingFlux_miczoo2                ! NEW Zoo3
      Real(kind=8)  :: grazingFlux2
      Real(kind=8)  :: Zoo2RespFlux                       ! Zooplankton respiration                   
@@ -1285,19 +1285,70 @@ Module REcoM_declarations
 !! *** Diagnostics  ***
   Real(kind=8)  :: recipbiostep                         ! 1/number of steps per recom cycle
   Real(kind=8),allocatable,dimension(:,:) :: Diags3Dloc
-  Real(kind=8)  :: locNPPn, locGPPn, locNNAn, locChldegn
-  Real(kind=8)  :: locNPPd, locGPPd, locNNAd, locChldegd
-  Real(kind=8)  :: locNPPc, locGPPc, locNNAc, locChldegc
-  Real(kind=8)  :: locNPPp, locGPPp, locNNAp, locChldegp     ! Phaeocystis
+
+  ! ==================================================================
+  ! SMALL PHYTOPLANKTON (n suffix)
+  ! ==================================================================
+  Real(kind=8)                          :: locNPPn, locGPPn, locNNAn, locChldegn
   Real(kind=8),allocatable,dimension(:) :: vertNPPn, vertGPPn, vertNNAn, vertChldegn
+  Real(kind=8),allocatable,dimension(:) :: vertrespn
+  Real(kind=8),allocatable,dimension(:) :: vertdocexn
+  Real(kind=8),allocatable,dimension(:) :: vertaggn
+
+  ! ==================================================================
+  ! DIATOMS (d suffix)
+  ! ==================================================================
+  Real(kind=8)                          :: locNPPd, locGPPd, locNNAd, locChldegd
   Real(kind=8),allocatable,dimension(:) :: vertNPPd, vertGPPd, vertNNAd, vertChldegd
+  Real(kind=8),allocatable,dimension(:) :: vertrespd
+  Real(kind=8),allocatable,dimension(:) :: vertdocexd
+  Real(kind=8),allocatable,dimension(:) :: vertaggd
+
+  ! ==================================================================
+  ! COCCOLITHOPHORES (c suffix)
+  ! ==================================================================
+  Real(kind=8)                          :: locNPPc, locGPPc, locNNAc, locChldegc
   Real(kind=8),allocatable,dimension(:) :: vertNPPc, vertGPPc, vertNNAc, vertChldegc
-  Real(kind=8),allocatable,dimension(:) :: vertNPPp, vertGPPp, vertNNAp, vertChldegp     ! Phaeocystis
-  Real(kind=8),allocatable,dimension(:) :: vertrespmeso, vertrespmacro, vertrespmicro
+  Real(kind=8),allocatable,dimension(:) :: vertrespc
+  Real(kind=8),allocatable,dimension(:) :: vertdocexc
+  Real(kind=8),allocatable,dimension(:) :: vertaggc
   Real(kind=8),allocatable,dimension(:) :: vertcalcdiss, vertcalcif
-  Real(kind=8),allocatable,dimension(:) :: vertaggn, vertaggd, vertaggc, vertaggp
-  Real(kind=8),allocatable,dimension(:) :: vertdocexn, vertdocexd, vertdocexc, vertdocexp
-  Real(kind=8),allocatable,dimension(:) :: vertrespn, vertrespd, vertrespc, vertrespp
+
+  ! ==================================================================
+  ! PHAEOCYSTIS (p suffix)
+  ! ==================================================================
+  Real(kind=8)                          :: locNPPp, locGPPp, locNNAp, locChldegp
+  Real(kind=8),allocatable,dimension(:) :: vertNPPp, vertGPPp, vertNNAp, vertChldegp
+  Real(kind=8),allocatable,dimension(:) :: vertrespp
+  Real(kind=8),allocatable,dimension(:) :: vertdocexp
+  Real(kind=8),allocatable,dimension(:) :: vertaggp
+
+  ! ==================================================================
+  ! MICROZOOPLANKTON
+  ! ==================================================================
+  Real(kind=8)                          :: locgrazmicro_tot, locgrazmicro_n, locgrazmicro_d, locgrazmicro_c, locgrazmicro_p
+  Real(kind=8),allocatable,dimension(:) :: vertgrazmicro_tot, vertgrazmicro_n, vertgrazmicro_d, vertgrazmicro_c, vertgrazmicro_p
+  Real(kind=8),allocatable,dimension(:) :: vertrespmicro
+
+  ! ==================================================================
+  ! MESOZOOPLANKTON
+  ! ==================================================================
+  Real(kind=8)                          :: locgrazmeso_tot, locgrazmeso_n, locgrazmeso_d, locgrazmeso_c, locgrazmeso_p
+  Real(kind=8)                          :: locgrazmeso_det, locgrazmeso_mic, locgrazmeso_det2
+  Real(kind=8),allocatable,dimension(:) :: vertgrazmeso_tot, vertgrazmeso_n, vertgrazmeso_d, vertgrazmeso_c, vertgrazmeso_p
+  Real(kind=8),allocatable,dimension(:) :: vertgrazmeso_det, vertgrazmeso_mic, vertgrazmeso_det2
+  Real(kind=8),allocatable,dimension(:) :: vertrespmeso
+
+  ! ==================================================================
+  ! MACROZOOPLANKTON
+  ! ==================================================================
+  Real(kind=8)                          :: locgrazmacro_tot, locgrazmacro_n, locgrazmacro_d, locgrazmacro_c, locgrazmacro_p
+  Real(kind=8)                          :: locgrazmacro_mes, locgrazmacro_det, locgrazmacro_mic, locgrazmacro_det2
+  Real(kind=8),allocatable,dimension(:) :: vertgrazmacro_tot, vertgrazmacro_n, vertgrazmacro_d, vertgrazmacro_c, vertgrazmacro_p
+  Real(kind=8),allocatable,dimension(:) :: vertgrazmacro_mes, vertgrazmacro_det, vertgrazmacro_mic, vertgrazmacro_det2
+  Real(kind=8),allocatable,dimension(:) :: vertrespmacro
+
+
 !!------------------------------------------------------------------------------                                                                                
 !! *** Benthos  ***
   Real(kind=8),allocatable,dimension(:) :: decayBenthos ! [1/day] Decay rate of detritus in the benthic layer
@@ -1372,6 +1423,8 @@ Module REcoM_GloVar
 
   Real(kind=8),allocatable,dimension(:)     :: GlodPCO2surf       ! [mmol/m2/day] ocean-atmosphere  
   Real(kind=8),allocatable,dimension(:,:)   :: GlodecayBenthos  ! [1/day] Decay rate of detritus in the benthic layer saved for oce_ale_tracer.F90
+  Real(kind=8),allocatable,dimension(:)     :: PistonVelocity   ! [m s-1]
+  Real(kind=8),allocatable,dimension(:)     :: alphaCO2         ! [mol L-1 atm-1]
 
   Real(kind=8),allocatable,dimension(:,:)   :: GlowFluxDet    ! 
   Real(kind=8),allocatable,dimension(:,:)   :: GlowFluxPhy    ! 
@@ -1396,10 +1449,28 @@ Module REcoM_GloVar
   Real(kind=8),allocatable,dimension(:)     :: GPPp
   Real(kind=8),allocatable,dimension(:)     :: NNAp
   Real(kind=8),allocatable,dimension(:)     :: Chldegp
-  Real(kind=8),allocatable,dimension(:,:)   :: grazmeso_tot
-  Real(kind=8),allocatable,dimension(:,:)   :: grazmeso_n
-  Real(kind=8),allocatable,dimension(:,:)   :: grazmeso_d
-  Real(kind=8),allocatable,dimension(:,:)   :: grazmeso_c
+  Real(kind=8),allocatable,dimension(:)     :: grazmeso_tot
+  Real(kind=8),allocatable,dimension(:)     :: grazmeso_n
+  Real(kind=8),allocatable,dimension(:)     :: grazmeso_d
+  Real(kind=8),allocatable,dimension(:)     :: grazmeso_c
+  Real(kind=8),allocatable,dimension(:)     :: grazmeso_p
+  Real(kind=8),allocatable,dimension(:)     :: grazmeso_det
+  Real(kind=8),allocatable,dimension(:)     :: grazmeso_mic
+  Real(kind=8),allocatable,dimension(:)     :: grazmeso_det2
+  Real(kind=8),allocatable,dimension(:)     :: grazmacro_tot
+  Real(kind=8),allocatable,dimension(:)     :: grazmacro_n
+  Real(kind=8),allocatable,dimension(:)     :: grazmacro_d
+  Real(kind=8),allocatable,dimension(:)     :: grazmacro_c
+  Real(kind=8),allocatable,dimension(:)     :: grazmacro_p
+  Real(kind=8),allocatable,dimension(:)     :: grazmacro_mes
+  Real(kind=8),allocatable,dimension(:)     :: grazmacro_det
+  Real(kind=8),allocatable,dimension(:)     :: grazmacro_mic
+  Real(kind=8),allocatable,dimension(:)     :: grazmacro_det2
+  Real(kind=8),allocatable,dimension(:)     :: grazmicro_tot
+  Real(kind=8),allocatable,dimension(:)     :: grazmicro_n
+  Real(kind=8),allocatable,dimension(:)     :: grazmicro_d
+  Real(kind=8),allocatable,dimension(:)     :: grazmicro_c
+  Real(kind=8),allocatable,dimension(:)     :: grazmicro_p
   Real(kind=8),allocatable,dimension(:,:)   :: respmeso
   Real(kind=8),allocatable,dimension(:,:)   :: respmacro
   Real(kind=8),allocatable,dimension(:,:)   :: respmicro
@@ -1848,3 +1919,476 @@ module REcoM_ciso
    
 end module REcoM_ciso
 
+
+
+module recom_diags_management
+    use recom_config
+    implicit none
+    
+contains
+
+! ==============================================================================
+! SUBROUTINE: allocate_and_init_diags
+! Purpose: Allocate and initialize all diagnostic arrays for a water column
+! ==============================================================================
+subroutine allocate_and_init_diags(nl)
+    use recom_locvar
+    use REcoM_declarations
+    implicit none
+    
+    integer, intent(in) :: nl  ! Number of vertical levels
+    
+    ! --------------------------------------------------------------------------
+    ! Small Phytoplankton
+    ! --------------------------------------------------------------------------
+    allocate(vertNPPn(nl-1), vertGPPn(nl-1), vertNNAn(nl-1), vertChldegn(nl-1))
+    allocate(vertrespn(nl-1), vertdocexn(nl-1), vertaggn(nl-1))
+    
+    vertNPPn    = 0.d0
+    vertGPPn    = 0.d0
+    vertNNAn    = 0.d0
+    vertChldegn = 0.d0
+    vertrespn   = 0.d0
+    vertdocexn  = 0.d0
+    vertaggn    = 0.d0
+    
+    ! --------------------------------------------------------------------------
+    ! Diatoms
+    ! --------------------------------------------------------------------------
+    allocate(vertNPPd(nl-1), vertGPPd(nl-1), vertNNAd(nl-1), vertChldegd(nl-1))
+    allocate(vertrespd(nl-1), vertdocexd(nl-1), vertaggd(nl-1))
+    
+    vertNPPd    = 0.d0
+    vertGPPd    = 0.d0
+    vertNNAd    = 0.d0
+    vertChldegd = 0.d0
+    vertrespd   = 0.d0
+    vertdocexd  = 0.d0
+    vertaggd    = 0.d0
+    
+    ! --------------------------------------------------------------------------
+    ! Coccolithophores (if enabled)
+    ! --------------------------------------------------------------------------
+    if (enable_coccos) then
+        allocate(vertNPPc(nl-1), vertGPPc(nl-1), vertNNAc(nl-1), vertChldegc(nl-1))
+        allocate(vertrespc(nl-1), vertdocexc(nl-1), vertaggc(nl-1))
+        allocate(vertcalcdiss(nl-1), vertcalcif(nl-1))
+        
+        vertNPPc     = 0.d0
+        vertGPPc     = 0.d0
+        vertNNAc     = 0.d0
+        vertChldegc  = 0.d0
+        vertrespc    = 0.d0
+        vertdocexc   = 0.d0
+        vertaggc     = 0.d0
+        vertcalcdiss = 0.d0
+        vertcalcif   = 0.d0
+        
+        ! ----------------------------------------------------------------------
+        ! Phaeocystis
+        ! ----------------------------------------------------------------------
+        allocate(vertNPPp(nl-1), vertGPPp(nl-1), vertNNAp(nl-1), vertChldegp(nl-1))
+        allocate(vertrespp(nl-1), vertdocexp(nl-1), vertaggp(nl-1))
+        
+        vertNPPp    = 0.d0
+        vertGPPp    = 0.d0
+        vertNNAp    = 0.d0
+        vertChldegp = 0.d0
+        vertrespp   = 0.d0
+        vertdocexp  = 0.d0
+        vertaggp    = 0.d0
+    else
+        ! Allocate calcification arrays even if coccos are disabled
+        allocate(vertcalcdiss(nl-1), vertcalcif(nl-1))
+        vertcalcdiss = 0.d0
+        vertcalcif   = 0.d0
+    endif
+    
+    ! --------------------------------------------------------------------------
+    ! Zooplankton Grazing (if enabled)
+    ! --------------------------------------------------------------------------
+    if (Grazing_detritus) then
+        
+        if (enable_3zoo2det) then
+            ! Microzooplankton
+            allocate(vertgrazmicro_tot(nl-1), vertgrazmicro_n(nl-1), vertgrazmicro_d(nl-1))
+            allocate(vertrespmicro(nl-1))
+            
+            vertgrazmicro_tot = 0.d0
+            vertgrazmicro_n   = 0.d0
+            vertgrazmicro_d   = 0.d0
+            vertrespmicro     = 0.d0
+            
+            ! Mesozooplankton
+            allocate(vertgrazmeso_tot(nl-1), vertgrazmeso_n(nl-1), vertgrazmeso_d(nl-1))
+            allocate(vertgrazmeso_det(nl-1), vertgrazmeso_mic(nl-1), vertgrazmeso_det2(nl-1))
+            allocate(vertrespmeso(nl-1))
+            
+            vertgrazmeso_tot  = 0.d0
+            vertgrazmeso_n    = 0.d0
+            vertgrazmeso_d    = 0.d0
+            vertgrazmeso_det  = 0.d0
+            vertgrazmeso_mic  = 0.d0
+            vertgrazmeso_det2 = 0.d0
+            vertrespmeso      = 0.d0
+            
+            if (enable_coccos) then
+                allocate(vertgrazmicro_c(nl-1), vertgrazmicro_p(nl-1))
+                allocate(vertgrazmeso_c(nl-1), vertgrazmeso_p(nl-1))
+                
+                vertgrazmicro_c = 0.d0
+                vertgrazmicro_p = 0.d0
+                vertgrazmeso_c  = 0.d0
+                vertgrazmeso_p  = 0.d0
+            endif
+        endif
+        
+        ! Macrozooplankton
+        allocate(vertgrazmacro_tot(nl-1), vertgrazmacro_n(nl-1), vertgrazmacro_d(nl-1))
+        allocate(vertgrazmacro_mes(nl-1), vertgrazmacro_det(nl-1))
+        allocate(vertgrazmacro_mic(nl-1), vertgrazmacro_det2(nl-1))
+        allocate(vertrespmacro(nl-1))
+        
+        vertgrazmacro_tot  = 0.d0
+        vertgrazmacro_n    = 0.d0
+        vertgrazmacro_d    = 0.d0
+        vertgrazmacro_mes  = 0.d0
+        vertgrazmacro_det  = 0.d0
+        vertgrazmacro_mic  = 0.d0
+        vertgrazmacro_det2 = 0.d0
+        vertrespmacro      = 0.d0
+        
+        if (enable_coccos) then
+            allocate(vertgrazmacro_c(nl-1), vertgrazmacro_p(nl-1))
+            vertgrazmacro_c = 0.d0
+            vertgrazmacro_p = 0.d0
+        endif
+    endif
+
+        ! --------------------------------------------------------------------------
+        ! Temperature and Photosynthesis Tracking Variables
+        ! --------------------------------------------------------------------------
+
+        allocate(VTPhyCO2(nl-1), VTDiaCO2(nl-1))
+        VTPhyCO2  = 0.d0
+        VTDiaCO2  = 0.d0
+    
+        allocate(VTCphotLigLim_phyto(nl-1), VTCphotLigLim_diatoms(nl-1))
+        VTCphotLigLim_phyto   = 0.d0
+        VTCphotLigLim_diatoms = 0.d0
+
+        allocate(VTCphot_phyto(nl-1), VTCphot_diatoms(nl-1))
+        VTCphot_phyto   = 0.d0
+        VTCphot_diatoms = 0.d0
+
+    if (enable_coccos) then    
+
+        allocate(VTTemp_diatoms(nl-1), VTTemp_phyto(nl-1))
+        VTTemp_diatoms = 0.d0
+        VTTemp_phyto   = 0.d0
+
+        allocate(VTqlimitFac_phyto(nl-1), VTqlimitFac_diatoms(nl-1))
+        VTqlimitFac_phyto   = 0.d0
+        VTqlimitFac_diatoms = 0.d0
+    
+        allocate(VTSi_assimDia(nl-1))
+        VTSi_assimDia = 0.d0
+
+        ! --------------------------------------------------------------------------
+        ! Coccolithophores and Phaeocystis Tracking (if enabled)
+        ! --------------------------------------------------------------------------
+
+        allocate(VTTemp_cocco(nl-1), VTTemp_phaeo(nl-1))
+        VTTemp_cocco = 0.d0
+        VTTemp_phaeo = 0.d0
+        
+        allocate(VTCoccoCO2(nl-1), VTPhaeoCO2(nl-1))
+        VTCoccoCO2 = 0.d0
+        VTPhaeoCO2 = 0.d0
+        
+        allocate(VTqlimitFac_cocco(nl-1), VTqlimitFac_phaeo(nl-1))
+        VTqlimitFac_cocco = 0.d0
+        VTqlimitFac_phaeo = 0.d0
+        
+        allocate(VTCphotLigLim_cocco(nl-1), VTCphotLigLim_phaeo(nl-1))
+        VTCphotLigLim_cocco = 0.d0
+        VTCphotLigLim_phaeo = 0.d0
+        
+        allocate(VTCphot_cocco(nl-1), VTCphot_phaeo(nl-1))
+        VTCphot_cocco = 0.d0
+        VTCphot_phaeo = 0.d0
+
+    endif
+
+end subroutine allocate_and_init_diags
+
+! ==============================================================================
+! SUBROUTINE: update_2d_diags
+! Purpose: Transfer local diagnostic values to 2D global arrays
+! ==============================================================================
+subroutine update_2d_diags(n)
+    use recom_locvar
+    use recom_glovar
+    use REcoM_declarations
+    implicit none
+    
+    integer, intent(in) :: n  ! Node index
+    
+    ! --------------------------------------------------------------------------
+    ! Small Phytoplankton
+    ! --------------------------------------------------------------------------
+    NPPn(n)    = locNPPn
+    GPPn(n)    = locGPPn
+    NNAn(n)    = locNNAn
+    Chldegn(n) = locChldegn
+    
+    ! --------------------------------------------------------------------------
+    ! Diatoms
+    ! --------------------------------------------------------------------------
+    NPPd(n)    = locNPPd
+    GPPd(n)    = locGPPd
+    NNAd(n)    = locNNAd
+    Chldegd(n) = locChldegd
+    
+    ! --------------------------------------------------------------------------
+    ! Coccolithophores and Phaeocystis (if enabled)
+    ! --------------------------------------------------------------------------
+    if (enable_coccos) then
+        NPPc(n)    = locNPPc
+        GPPc(n)    = locGPPc
+        NNAc(n)    = locNNAc
+        Chldegc(n) = locChldegc
+        
+        NPPp(n)    = locNPPp
+        GPPp(n)    = locGPPp
+        NNAp(n)    = locNNAp
+        Chldegp(n) = locChldegp
+    endif
+    
+    ! --------------------------------------------------------------------------
+    ! Zooplankton Grazing (if enabled)
+    ! --------------------------------------------------------------------------
+    if (Grazing_detritus) then
+        ! Mesozooplankton
+        grazmeso_tot(n) = locgrazmeso_tot
+        grazmeso_n(n)   = locgrazmeso_n
+        grazmeso_d(n)   = locgrazmeso_d
+        grazmeso_det(n) = locgrazmeso_det
+        
+        if (enable_coccos) then
+            grazmeso_c(n) = locgrazmeso_c
+            grazmeso_p(n) = locgrazmeso_p
+        endif
+        
+        if (enable_3zoo2det) then
+            grazmeso_mic(n)  = locgrazmeso_mic
+            grazmeso_det2(n) = locgrazmeso_det2
+            
+            ! Macrozooplankton
+            grazmacro_tot(n)  = locgrazmacro_tot
+            grazmacro_n(n)    = locgrazmacro_n
+            grazmacro_d(n)    = locgrazmacro_d
+            grazmacro_mes(n)  = locgrazmacro_mes
+            grazmacro_det(n)  = locgrazmacro_det
+            grazmacro_mic(n)  = locgrazmacro_mic
+            grazmacro_det2(n) = locgrazmacro_det2
+            
+            if (enable_coccos) then
+                grazmacro_c(n) = locgrazmacro_c
+                grazmacro_p(n) = locgrazmacro_p
+            endif
+            
+            ! Microzooplankton
+            grazmicro_tot(n) = locgrazmicro_tot
+            grazmicro_n(n)   = locgrazmicro_n
+            grazmicro_d(n)   = locgrazmicro_d
+            
+            if (enable_coccos) then
+                grazmicro_c(n) = locgrazmicro_c
+                grazmicro_p(n) = locgrazmicro_p
+            endif
+        endif
+    endif
+    
+end subroutine update_2d_diags
+
+! ==============================================================================
+! SUBROUTINE: update_3d_diags
+! Purpose: Transfer vertical profile diagnostic values to 3D global arrays
+! ==============================================================================
+subroutine update_3d_diags(n, nzmax)
+    use recom_locvar
+    use recom_glovar
+    use REcoM_declarations
+    implicit none
+    
+    integer, intent(in) :: n      ! Node index
+    integer, intent(in) :: nzmax  ! Maximum vertical level for this node
+    
+    ! --------------------------------------------------------------------------
+    ! Small Phytoplankton
+    ! --------------------------------------------------------------------------
+    aggn(1:nzmax,n)   = vertaggn(1:nzmax)
+    docexn(1:nzmax,n) = vertdocexn(1:nzmax)
+    respn(1:nzmax,n)  = vertrespn(1:nzmax)
+    NPPn3D(1:nzmax,n) = vertNPPn(1:nzmax)
+    
+    ! --------------------------------------------------------------------------
+    ! Diatoms
+    ! --------------------------------------------------------------------------
+    aggd(1:nzmax,n)   = vertaggd(1:nzmax)
+    docexd(1:nzmax,n) = vertdocexd(1:nzmax)
+    respd(1:nzmax,n)  = vertrespd(1:nzmax)
+    NPPd3D(1:nzmax,n) = vertNPPd(1:nzmax)
+    
+    ! --------------------------------------------------------------------------
+    ! Coccolithophores and Phaeocystis (if enabled)
+    ! --------------------------------------------------------------------------
+    if (enable_coccos) then
+        aggc(1:nzmax,n)   = vertaggc(1:nzmax)
+        docexc(1:nzmax,n) = vertdocexc(1:nzmax)
+        respc(1:nzmax,n)  = vertrespc(1:nzmax)
+        NPPc3D(1:nzmax,n) = vertNPPc(1:nzmax)
+        
+        aggp(1:nzmax,n)   = vertaggp(1:nzmax)
+        docexp(1:nzmax,n) = vertdocexp(1:nzmax)
+        respp(1:nzmax,n)  = vertrespp(1:nzmax)
+        NPPp3D(1:nzmax,n) = vertNPPp(1:nzmax)
+    endif
+    
+    ! --------------------------------------------------------------------------
+    ! Calcification
+    ! --------------------------------------------------------------------------
+    calcdiss(1:nzmax,n) = vertcalcdiss(1:nzmax)
+    calcif(1:nzmax,n)   = vertcalcif(1:nzmax)
+    
+    ! --------------------------------------------------------------------------
+    ! Zooplankton Respiration
+    ! --------------------------------------------------------------------------
+    respmeso(1:nzmax,n) = vertrespmeso(1:nzmax)
+    
+    if (enable_3zoo2det) then
+        respmacro(1:nzmax,n) = vertrespmacro(1:nzmax)
+        respmicro(1:nzmax,n) = vertrespmicro(1:nzmax)
+    endif
+
+    TPhyCO2(1:nzmax,n)             = VTPhyCO2(1:nzmax)
+    TDiaCO2(1:nzmax,n)             = VTDiaCO2(1:nzmax)
+    TCphotLigLim_phyto(1:nzmax,n)  = VTCphotLigLim_phyto(1:nzmax)
+    TCphot_phyto(1:nzmax,n)        = VTCphot_phyto(1:nzmax)
+    TCphotLigLim_diatoms(1:nzmax,n)= VTCphotLigLim_diatoms(1:nzmax)
+    TCphot_diatoms(1:nzmax,n)      = VTCphot_diatoms(1:nzmax)
+
+    if (enable_coccos) then
+        ! --------------------------------------------------------------------------
+        ! Temperature and Photosynthesis Tracking - Phytoplankton
+        ! --------------------------------------------------------------------------
+        TTemp_phyto(1:nzmax,n)         = VTTemp_phyto(1:nzmax)
+        TqlimitFac_phyto(1:nzmax,n)    = VTqlimitFac_phyto(1:nzmax)
+
+        ! --------------------------------------------------------------------------
+        ! Temperature and Photosynthesis Tracking - Diatoms
+        ! --------------------------------------------------------------------------
+        TTemp_diatoms(1:nzmax,n)       = VTTemp_diatoms(1:nzmax)
+        TqlimitFac_diatoms(1:nzmax,n)  = VTqlimitFac_diatoms(1:nzmax)
+        TSi_assimDia(1:nzmax,n)        = VTSi_assimDia(1:nzmax)
+ 
+        ! --------------------------------------------------------------------------
+        ! Temperature and Photosynthesis Tracking - Coccos/Phaeo (if enabled)
+        ! --------------------------------------------------------------------------
+
+        TTemp_cocco(1:nzmax,n)         = VTTemp_cocco(1:nzmax)
+        TCoccoCO2(1:nzmax,n)           = VTCoccoCO2(1:nzmax)
+        TqlimitFac_cocco(1:nzmax,n)    = VTqlimitFac_cocco(1:nzmax)
+        TCphotLigLim_cocco(1:nzmax,n)  = VTCphotLigLim_cocco(1:nzmax)
+        TCphot_cocco(1:nzmax,n)        = VTCphot_cocco(1:nzmax)
+        
+        TTemp_phaeo(1:nzmax,n)         = VTTemp_phaeo(1:nzmax)
+        TPhaeoCO2(1:nzmax,n)           = VTPhaeoCO2(1:nzmax)
+        TqlimitFac_phaeo(1:nzmax,n)    = VTqlimitFac_phaeo(1:nzmax)
+        TCphotLigLim_phaeo(1:nzmax,n)  = VTCphotLigLim_phaeo(1:nzmax)
+        TCphot_phaeo(1:nzmax,n)        = VTCphot_phaeo(1:nzmax)
+    endif
+    
+end subroutine update_3d_diags
+
+! ==============================================================================
+! SUBROUTINE: deallocate_diags
+! Purpose: Deallocate all diagnostic arrays
+! ==============================================================================
+subroutine deallocate_diags()
+    use recom_locvar
+    use REcoM_declarations
+    implicit none
+
+        ! --------------------------------------------------------------------------
+        ! Small Phytoplankton
+        ! --------------------------------------------------------------------------
+        deallocate(vertNPPn, vertGPPn, vertNNAn, vertChldegn)
+        deallocate(vertaggn, vertdocexn, vertrespn)
+        deallocate(VTPhyCO2, VTCphotLigLim_phyto, VTCphot_phyto)
+    
+        ! --------------------------------------------------------------------------
+        ! Diatoms
+        ! --------------------------------------------------------------------------
+        deallocate(vertNPPd, vertGPPd, vertNNAd, vertChldegd)
+        deallocate(vertaggd, vertdocexd, vertrespd)
+        deallocate(VTDiaCO2, VTCphotLigLim_diatoms, VTCphot_diatoms)
+
+    if (enable_coccos) then
+        deallocate(VTTemp_phyto, VTqlimitFac_phyto)
+        deallocate(VTTemp_diatoms, VTqlimitFac_diatoms)
+        deallocate(VTSi_assimDia)
+
+        ! --------------------------------------------------------------------------
+        ! Coccolithophores and Phaeocystis (if enabled)
+        ! --------------------------------------------------------------------------
+        deallocate(vertNPPc, vertGPPc, vertNNAc, vertChldegc)
+        deallocate(vertaggc, vertdocexc, vertrespc)
+        deallocate(vertcalcdiss, vertcalcif)
+        deallocate(VTTemp_cocco, VTCoccoCO2, VTqlimitFac_cocco)
+        deallocate(VTCphotLigLim_cocco, VTCphot_cocco)
+        
+        deallocate(vertNPPp, vertGPPp, vertNNAp, vertChldegp)
+        deallocate(vertaggp, vertdocexp, vertrespp)
+        deallocate(VTTemp_phaeo, VTPhaeoCO2, VTqlimitFac_phaeo)
+        deallocate(VTCphotLigLim_phaeo, VTCphot_phaeo)
+    else
+        deallocate(vertcalcdiss, vertcalcif)
+    endif
+    
+    ! --------------------------------------------------------------------------
+    ! Zooplankton Grazing (if enabled)
+    ! --------------------------------------------------------------------------
+    if (Grazing_detritus) then
+        deallocate(vertgrazmeso_tot, vertgrazmeso_n, vertgrazmeso_d)
+        deallocate(vertgrazmeso_det, vertrespmeso)
+        
+        if (enable_coccos) then
+            deallocate(vertgrazmeso_c, vertgrazmeso_p)
+        endif
+        
+        if (enable_3zoo2det) then
+            deallocate(vertgrazmeso_mic, vertgrazmeso_det2)
+            
+            deallocate(vertgrazmacro_tot, vertgrazmacro_n, vertgrazmacro_d)
+            deallocate(vertgrazmacro_mes, vertgrazmacro_det)
+            deallocate(vertgrazmacro_mic, vertgrazmacro_det2)
+            deallocate(vertrespmacro)
+            
+            if (enable_coccos) then
+                deallocate(vertgrazmacro_c, vertgrazmacro_p)
+            endif
+            
+            deallocate(vertgrazmicro_tot, vertgrazmicro_n, vertgrazmicro_d)
+            deallocate(vertrespmicro)
+            
+            if (enable_coccos) then
+                deallocate(vertgrazmicro_c, vertgrazmicro_p)
+            endif
+        endif
+    endif
+    
+end subroutine deallocate_diags
+
+end module recom_diags_management

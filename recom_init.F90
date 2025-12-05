@@ -73,6 +73,7 @@ subroutine recom_init(tracers, partit, mesh)
     allocate(RiverDSi2D            ( node_size ))
     allocate(RiverDIC2D            ( node_size ))
     allocate(RiverAlk2D            ( node_size ))
+    allocate(RiverFe               ( node_size ))
 
     !! * Erosion nutrients as surface boundary condition *
     allocate(ErosionTON2D          ( node_size ))
@@ -95,6 +96,9 @@ subroutine recom_init(tracers, partit, mesh)
     allocate(Benthos_tr            ( node_size, benthos_num, num_tracers )) ! kh 25.03.22 buffer per tracer index
     allocate(GloHplus              ( node_size ))
     allocate(DenitBen              ( node_size ))
+    allocate(PistonVelocity        ( node_size ))
+    allocate(alphaCO2              ( node_size ))
+
 
     allocate(LocBenthos            ( benthos_num ))
     allocate(decayBenthos          ( benthos_num ))     ! [1/day] Decay rate of detritus in the benthic layer
@@ -112,6 +116,7 @@ subroutine recom_init(tracers, partit, mesh)
     RiverDSi2D            = 0.d0
     RiverDIC2D            = 0.d0
     RiverAlk2D            = 0.d0
+    RiverFe               = 0.d0
 
     ErosionTON2D          = 0.d0
     ErosionTON2D          = 0.d0
@@ -131,11 +136,11 @@ subroutine recom_init(tracers, partit, mesh)
     Benthos_tr(:,:,:)     = 0.0d0 ! kh 25.03.22
     GloHplus              = exp(-8.d0 * log(10.d0)) ! = 10**(-8)
     DenitBen              = 0.d0
+    PistonVelocity        = 0.d0
+    alphaCO2              = 0.d0
 
     LocBenthos            = 0.d0
     decayBenthos          = 0.d0
-    wFluxPhy              = 0.d0
-    wFluxDia              = 0.d0
     PAR3D                 = 0.d0
 
 !    pco2surf           = 0.d0
@@ -182,6 +187,56 @@ subroutine recom_init(tracers, partit, mesh)
     Chldegd = 0.d0
     Chldegc = 0.d0
     Chldegp = 0.d0
+
+  allocate(grazmeso_tot(node_size))
+  allocate(grazmeso_n(node_size))
+  allocate(grazmeso_d(node_size))
+  allocate(grazmeso_c(node_size))
+  allocate(grazmeso_p(node_size))
+  allocate(grazmeso_det(node_size))
+  allocate(grazmeso_mic(node_size))
+  allocate(grazmeso_det2(node_size))
+
+  grazmeso_tot = 0.d0
+  grazmeso_n   = 0.d0
+  grazmeso_d   = 0.d0
+  grazmeso_c   = 0.d0
+  grazmeso_p   = 0.d0
+  grazmeso_det = 0.d0
+  grazmeso_mic = 0.d0
+  grazmeso_det2= 0.d0
+
+  allocate(grazmacro_tot(node_size))
+  allocate(grazmacro_n(node_size))
+  allocate(grazmacro_d(node_size))
+  allocate(grazmacro_c(node_size))
+  allocate(grazmacro_p(node_size))
+  allocate(grazmacro_mes(node_size))
+  allocate(grazmacro_det(node_size))
+  allocate(grazmacro_mic(node_size))
+  allocate(grazmacro_det2(node_size))
+
+  grazmacro_tot = 0.d0
+  grazmacro_n = 0.d0
+  grazmacro_d = 0.d0
+  grazmacro_c = 0.d0
+  grazmacro_p = 0.d0
+  grazmacro_mes = 0.d0
+  grazmacro_det = 0.d0
+  grazmacro_mic = 0.d0
+  grazmacro_det2= 0.d0
+
+  allocate(grazmicro_tot(node_size))
+  allocate(grazmicro_n(node_size))
+  allocate(grazmicro_d(node_size))
+  allocate(grazmicro_c(node_size))
+  allocate(grazmicro_p(node_size))
+
+  grazmicro_tot = 0.d0
+  grazmicro_n = 0.d0
+  grazmicro_d = 0.d0
+  grazmicro_c = 0.d0
+  grazmicro_p = 0.d0
 
 !! *** Allocate 3D diagnostics ***
     allocate(respmeso     ( nl-1, node_size ))
@@ -326,8 +381,8 @@ subroutine recom_init(tracers, partit, mesh)
     Sinkingvel2(:,:)      = 0.d0
 
     allocate(Sinkvel1_tr(nl,node_size,num_tracers), Sinkvel2_tr(nl,node_size,num_tracers))  ! OG 16.03.23
-    Sinkvel1_tr(:,:,:)    = 0.0d0 ! OG 16.03.23
-    Sinkvel2_tr(:,:,:)    = 0.0d0 ! OG 16.03.23
+    Sinkvel1_tr(:,:,:)    = 0.0d0
+    Sinkvel2_tr(:,:,:)    = 0.0d0
 
     if (use_MEDUSA) then
         allocate(GloSed(node_size,sedflx_num))
@@ -404,7 +459,7 @@ subroutine recom_init(tracers, partit, mesh)
             tracers%data(i)%values(:,:) = tiny
 
         ! --- Mesozooplankton (Heterotrophs) ---
-        CASE (1009)! HetN - Heterotroph Nitrogen
+        CASE (1009)  ! HetN - Heterotroph Nitrogen
             tracers%data(i)%values(:,:) = tiny
 
         CASE (1010)  ! HetC - Heterotroph Carbon (using Redfield ratio)

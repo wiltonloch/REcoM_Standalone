@@ -112,7 +112,7 @@ subroutine REcoM_sms(n, Nn, state, thick, SurfSR, sms, Temp, Sali_depth, CO2_wat
     real(kind=8), dimension(nl - 1) :: Sink
 
 ! --- Biogeochemical state variables ---
-real(kind=8) :: &
+    real(kind=8) :: &
     DIN,     & ! [mmol/m3] Dissolved inorganic nitrogen
     DIC,     & ! [mmol/m3] Dissolved inorganic carbon
     Alk,     & ! [mmol/m3] Total alkalinity
@@ -275,8 +275,9 @@ real(kind=8) :: &
         !   tiny_C_c    : Minimum cocco carbon [mmolC m-3]
         !   chl2N_max_c : Maximum cocco Chl:N ratio [mgChl mmolN-1]
         !   NCmax_c     : Maximum cocco N:C quota [mmolN mmolC-1]
-            tiny_N_c = tiny_chl / chl2N_max_c
-            tiny_C_c = tiny_N_c / NCmax_c
+
+        tiny_N_c = tiny_chl / chl2N_max_c
+        tiny_C_c = tiny_N_c / NCmax_c
 
         ! Phaeocystis thresholds
         ! Variables:
@@ -284,6 +285,7 @@ real(kind=8) :: &
         !   tiny_C_p    : Minimum Phaeo carbon [mmolC m-3]
         !   chl2N_max_p : Maximum Phaeo Chl:N ratio [mgChl mmolN-1]
         !   NCmax_p     : Maximum Phaeo N:C quota [mmolN mmolC-1]
+
         tiny_N_p = tiny_chl / chl2N_max_p
         tiny_C_p = tiny_N_p / NCmax_p
 
@@ -336,16 +338,16 @@ real(kind=8) :: &
     !   dt_b = 0.25/24 = 0.0104 days
     !-------------------------------------------------------------------------------
 
-    ! Reciprocal reference temperature for Arrhenius calculations
-    ! Reference: 288.15 K (15degC) used in temperature dependence functions
-    rTref = real(one) / recom_Tref
-
     ! Convert FESOM physics time step to days
     dt_d = dt / SecondsPerDay
 
     ! Calculate biogeochemistry sub-time step
     ! Divides physics step into smaller biogeochemical steps
     dt_b = dt_d / real(biostep)
+
+    ! Reciprocal reference temperature for Arrhenius calculations
+    ! Reference: 288.15 K (15degC) used in temperature dependence functions
+    rTref = real(one) / recom_Tref
 
     !===============================================================================
     ! MAIN TIME INTEGRATION LOOP
@@ -372,7 +374,7 @@ real(kind=8) :: &
 
     do step = one, biostep
 
-        ! Reset upper light attenuation at start of each sub-step
+        ! Reset upper light attenuation (top of the cell) at start of each sub-step
         ! Light attenuation integrates downward through water column
         kdzUpper = 0.d0
 
@@ -388,14 +390,14 @@ real(kind=8) :: &
         !
         ! Variables:
         !   k  : Current vertical level index [-]
-        !   Nn : Number of vertical levels in water column [-]
+        !   nn : Number of vertical levels in water column [-]
         !
         ! Note: Alternative loop configurations commented out:
         !   - nzmin, nzmax: Min/max active levels (for dry cells)
         !   - myDim_nod2D: Horizontal dimension (for 3D unstructured grids)
         !---------------------------------------------------------------------------
 
-        do k = one, Nn
+        do k = one, nn
             ! Alternative loop structures (commented out):
             ! do n = 1, myDim_nod2D
             !     Nn = nlevels_nod2D(n) - 1
@@ -974,45 +976,45 @@ real(kind=8) :: &
 
             if (ciso) then
                 ! 13C isotope tracers
-                DIC_13     = max(tiny, state(k,idic_13) + sms(k,idic_13))
-                PhyC_13    = max(tiny_C, state(k,iphyc_13) + sms(k,iphyc_13))
-                DetC_13    = max(tiny, state(k,idetc_13) + sms(k,idetc_13))
-                HetC_13    = max(tiny, state(k,ihetc_13) + sms(k,ihetc_13))
-                EOC_13     = max(tiny, state(k,idoc_13) + sms(k,idoc_13))
-                DiaC_13    = max(tiny_C, state(k,idiac_13) + sms(k,idiac_13))
-                PhyCalc_13 = max(tiny, state(k,iphycal_13) + sms(k,iphycal_13))
-                DetCalc_13 = max(tiny, state(k,idetcal_13) + sms(k,idetcal_13))
+                DIC_13     = max(tiny, state(k, idic_13)    + sms(k, idic_13))
+                PhyC_13    = max(tiny_C, state(k, iphyc_13) + sms(k, iphyc_13))
+                DetC_13    = max(tiny, state(k, idetc_13)   + sms(k, idetc_13))
+                HetC_13    = max(tiny, state(k, ihetc_13)   + sms(k, ihetc_13))
+                EOC_13     = max(tiny, state(k, idoc_13)    + sms(k, idoc_13))
+                DiaC_13    = max(tiny_C, state(k, idiac_13) + sms(k, idiac_13))
+                PhyCalc_13 = max(tiny, state(k, iphycal_13) + sms(k, iphycal_13))
+                DetCalc_13 = max(tiny, state(k, idetcal_13) + sms(k, idetcal_13))
 
                 ! 13C calcite dissolution with fractionation
                 calc_diss_13 = alpha_dcal_13 * calc_diss
 
                 ! 13C quotas
-                quota_13         = PhyN / PhyC_13              ! Small phyto 13C quota
-                recipQuota_13    = real(one) / quota_13
-                quota_dia_13     = DiaN / DiaC_13              ! Diatom 13C quota
+                quota_13          = PhyN / PhyC_13
+                recipQuota_13     = real(one) / quota_13
+                quota_dia_13      = DiaN / DiaC_13
                 recipQuota_dia_13 = real(one) / quota_dia_13
-                recipQZoo_13     = HetC_13 / HetN              ! Heterotroph 13C quota
+                recipQZoo_13      = HetC_13 / HetN
 
                 ! 14C radiocarbon tracers (if enabled)
                 if (ciso_14) then
-                    DIC_14 = max(tiny, state(k,idic_14) + sms(k,idic_14))
+                    DIC_14 = max(tiny, state(k,idic_14) + sms(k, idic_14))
 
                     if (ciso_organic_14) then
-                        PhyC_14    = max(tiny_C, state(k,iphyc_14) + sms(k,iphyc_14))
-                        DetC_14    = max(tiny, state(k,idetc_14) + sms(k,idetc_14))
-                        HetC_14    = max(tiny, state(k,ihetc_14) + sms(k,ihetc_14))
-                        EOC_14     = max(tiny, state(k,idoc_14) + sms(k,idoc_14))
-                        DiaC_14    = max(tiny_C, state(k,idiac_14) + sms(k,idiac_14))
-                        PhyCalc_14 = max(tiny, state(k,iphycal_14) + sms(k,iphycal_14))
-                        DetCalc_14 = max(tiny, state(k,idetcal_14) + sms(k,idetcal_14))
+                        PhyC_14           = max(tiny_C, state(k,iphyc_14) + sms(k, iphyc_14))
+                        DetC_14           = max(tiny, state(k,idetc_14)   + sms(k, idetc_14))
+                        HetC_14           = max(tiny, state(k,ihetc_14)   + sms(k, ihetc_14))
+                        EOC_14            = max(tiny, state(k,idoc_14)    + sms(k, idoc_14))
+                        DiaC_14           = max(tiny_C, state(k,idiac_14) + sms(k, idiac_14))
+                        PhyCalc_14        = max(tiny, state(k,iphycal_14) + sms(k, iphycal_14))
+                        DetCalc_14        = max(tiny, state(k,idetcal_14) + sms(k, idetcal_14))
 
-                        calc_diss_14 = alpha_dcal_14 * calc_diss
+                        calc_diss_14      = alpha_dcal_14 * calc_diss
 
-                        quota_14         = PhyN / PhyC_14
-                        recipQuota_14    = real(one) / quota_14
-                        quota_dia_14     = DiaN / DiaC_14
+                        quota_14          = PhyN / PhyC_14
+                        recipQuota_14     = real(one) / quota_14
+                        quota_dia_14      = DiaN / DiaC_14
                         recipQuota_dia_14 = real(one) / quota_dia_14
-                        recipQZoo_14     = HetC_14 / HetN
+                        recipQZoo_14      = HetC_14 / HetN
                     end if ! ciso_organic_14
                 end if   ! ciso_14
             end if     ! ciso
@@ -1293,7 +1295,7 @@ real(kind=8) :: &
 
             if (k == 1) then
 
-               !===========================================================================
+                !===========================================================================
                 ! SURFACE LAYER INITIALIZATION
                 !===========================================================================
                 ! Surface layer receives full incident solar radiation
@@ -1312,7 +1314,6 @@ real(kind=8) :: &
                     ! Add coccolithophores and Phaeocystis if enabled
                     chl_upper = chl_upper + CoccoChl + PhaeoChl
                 endif
-
            else
 
                 !===========================================================================
@@ -2208,7 +2209,7 @@ real(kind=8) :: &
             if (use_photodamage) then
 
                 !===========================================================================
-                ! 3.2 PHOTODAMAGE-DEPENDENT DEGRADATION
+                ! PHOTODAMAGE-DEPENDENT DEGRADATION
                 !===========================================================================
                 ! Light-dependent chlorophyll degradation using saturation model
                 ! Higher light intensity increases chlorophyll turnover
@@ -2458,13 +2459,13 @@ real(kind=8) :: &
         if (PARave >= tiny .AND. PARave == PARave) then
             chlSynth = N_assim * Chl2N_max * &
                        min(real(one), Cphot/(alfa * Chl2C * PARave))
-        end if
+        endif
 
         ! --- Diatom Chlorophyll Synthesis ---
         ChlSynth_dia = zero
         if (PARave >= tiny .AND. PARave == PARave) then
             ChlSynth_dia = N_assim_dia * Chl2N_max_d * &
-                           min(real(one), Cphot_dia/(alfa_d * Chl2C_dia * PARave))
+                           min(real(one), Cphot_dia / (alfa_d * Chl2C_dia * PARave))
         end if
 
         ! --- Optional Coccolithophore and Phaeocystis Chlorophyll Synthesis ---
@@ -2473,7 +2474,7 @@ real(kind=8) :: &
             ChlSynth_cocco = zero
             if (PARave >= tiny .AND. PARave == PARave) then
                 ChlSynth_cocco = N_assim_cocco * Chl2N_max_c * &
-                                 min(real(one), Cphot_cocco/(alfa_c * Chl2C_cocco * PARave))
+                                 min(real(one), Cphot_cocco / (alfa_c * Chl2C_cocco * PARave))
             end if
 
             ! Phaeocystis chlorophyll synthesis
@@ -2854,7 +2855,7 @@ real(kind=8) :: &
                 ! Add detritus pools if detrital grazing is enabled
                 if (Grazing_detritus) then
                     aux = aux + pzDet2 * DetN + pzDetZ22 * DetZ2N
-                end if
+                endif
 
                 ! Add coccolithophores and Phaeocystis if enabled
                 if (enable_coccos) then
@@ -2943,7 +2944,7 @@ real(kind=8) :: &
 
             if (Grazing_detritus) then
                 food2 = food2 + fDetN2 + fDetZ2N2
-            end if
+            endif
 
             if (enable_coccos) then
                 food2 = food2 + fCoccoN2 + fPhaeoN2
@@ -4112,8 +4113,8 @@ real(kind=8) :: &
         !---------------------------------------------------------------------------
         ! SOURCES: Net Photosynthesis
         !---------------------------------------------------------------------------
-            + Cphot               * PhyC                                   & ! Gross photosynthesis
-            - phyRespRate         * PhyC                                   & ! Autotrophic respiration
+        + Cphot               * PhyC                                   & ! Gross photosynthesis
+        - phyRespRate         * PhyC                                   & ! Autotrophic respiration
         !---------------------------------------------------------------------------
         ! SINKS: Losses
         !---------------------------------------------------------------------------
@@ -4188,7 +4189,6 @@ real(kind=8) :: &
                     + grazingFlux_dia3   - grazingFlux_dia3   * grazEff3   & ! Diatoms
                     + (grazingFlux_Cocco3 - grazingFlux_Cocco3 * grazEff3) * is_coccos & ! Coccolithophores
                     + (grazingFlux_Phaeo3 - grazingFlux_Phaeo3 * grazEff3) * is_coccos & ! Phaeocystis
-
                     !-----------------------------------------------------------------------
                     ! SOURCES: Phytoplankton Aggregation
                     !-----------------------------------------------------------------------
@@ -4210,7 +4210,6 @@ real(kind=8) :: &
                     !-----------------------------------------------------------------------
                     - reminN * arrFunc * O2Func * DetN                     & ! Bacterial decomposition
                                                                           ) * dt_b + sms(k,idetn)
-
             !-------------------------------------------------------------------------------
             ! Configuration 2: WITH Detritus Grazing + 2 Zooplankton Types (Standard)
             !-------------------------------------------------------------------------------
@@ -4245,7 +4244,6 @@ real(kind=8) :: &
                     - reminN * arrFunc * O2Func * DetN                     &
                                                                           ) * dt_b + sms(k,idetn)
             endif
-
             !-------------------------------------------------------------------------------
             ! Configuration 3: WITHOUT Detritus Grazing + 3 Zooplankton Types
             !-------------------------------------------------------------------------------
@@ -4313,7 +4311,6 @@ real(kind=8) :: &
                     !-----------------------------------------------------------------------
                     - reminN * arrFunc * O2Func * DetN                     &
                                                                           ) * dt_b + sms(k,idetn)
-
             endif
         end if
 
@@ -4834,7 +4831,6 @@ real(kind=8) :: &
                     - reminN * arrFunc * O2Func * DetZ2N                   &
                                                                           ) * dt_b + sms(k,idetz2n)
             end if
-
             !===============================================================================
             ! 16. FAST-SINKING DETRITUS CARBON (DetZ2C)
             !===============================================================================
@@ -5263,7 +5259,7 @@ real(kind=8) :: &
                 !-----------------------------------------------------------------------
                 ! SINKS: Grazing (C-basis)
                 !-----------------------------------------------------------------------
-                - grazingFlux_cocco         * recipQuota_cocco             & ! Mesozooplankton (N->C)
+                - grazingFlux_cocco         * recipQuota_cocco               & ! Mesozooplankton (N->C)
                 - grazingFlux_Cocco2        * recipQuota_cocco * is_3zoo2det & ! Macrozooplankton
                 - grazingFlux_Cocco3        * recipQuota_cocco * is_3zoo2det & ! Microzooplankton
                                                                           ) * dt_b + sms(k,icocc)
@@ -5544,7 +5540,7 @@ real(kind=8) :: &
                 - kScavFe * DetC * FreeFe                                  & ! Slow-sinking detritus
                 - kScavFe * DetZ2C * FreeFe * is_3zoo2det                  & ! Fast-sinking detritus
                                                                           ) * dt_b + sms(k,ife)
- 
+
         !===============================================================================
         ! 34. PHYTOPLANKTON CALCITE (PhyCalc)
         !===============================================================================
@@ -6381,7 +6377,7 @@ real(kind=8) :: &
                     ) * recipbiostep
                 endif
 
-               !===========================================================================
+                !===========================================================================
                 ! NET NITROGEN ASSIMILATION
                 !===========================================================================
                 ! Net nitrogen uptake = Assimilation - Exudation losses
@@ -6437,7 +6433,7 @@ real(kind=8) :: &
                     ) * recipbiostep
                 endif
 
-               !===========================================================================
+                !===========================================================================
                 ! CHLOROPHYLL DEGRADATION RATES
                 !===========================================================================
                 ! Tracks chlorophyll turnover rates (photodamage + senescence)
@@ -6487,7 +6483,302 @@ real(kind=8) :: &
                     ) * recipbiostep
                 endif
 
-               !===========================================================================
+!--------------------------------------------------------------------------------------------------------------------------------------
+
+! GRAZING FLUXES
+! Only for the case with detritus grazing, not without detritus grazing, because this output is probably anyway not needed as a default.
+! diagnostics, combined from Onur and Cara, modified by Miriam
+
+    if (Grazing_detritus) then
+
+!===========================================================================
+! MESOZOOPLANKTON GRAZING
+!===========================================================================
+! Tracks grazing by mesozooplankton (100-2000 μm) on multiple prey types
+! Central trophic link connecting primary producers to higher consumers
+!
+! Variables:
+!   vertgrazmeso_tot(k)   : Total assimilated grazing [mmolC m-3 day-1]
+!   vertgrazmeso_n(k)     : Grazing on nanophytoplankton [mmolC m-3 day-1]
+!   vertgrazmeso_d(k)     : Grazing on diatoms [mmolC m-3 day-1]
+!   vertgrazmeso_c(k)     : Grazing on coccolithophores [mmolC m-3 day-1]
+!   vertgrazmeso_p(k)     : Grazing on Phaeocystis [mmolC m-3 day-1]
+!   vertgrazmeso_det(k)   : Grazing on detritus 1 [mmolC m-3 day-1]
+!   vertgrazmeso_det2(k)  : Grazing on detritus 2 [mmolC m-3 day-1]
+!   vertgrazmeso_mic(k)   : Grazing on microzooplankton [mmolC m-3 day-1]
+!
+! Prey Composition:
+!   PHY    : Nanophytoplankton (2-20 μm) - primary prey
+!   DIA    : Diatoms (>20 μm) - silicified cells
+!   COCCO  : Coccolithophores - calcifying cells (optional)
+!   PHAEO  : Phaeocystis colonies (optional)
+!   DET    : Detritus type 1 - particulate organic matter
+!   DET2   : Detritus type 2 - larger particles (optional)
+!   MICZOO : Microzooplankton - intraguild predation (optional)
+!
+! Ecological Significance:
+!   - Grazing efficiency (grazEff): 30-70%, rest to fecal pellets
+!   - Prey selection via Holling Type II/III functional response
+!   - Major pathway for carbon export via fecal pellets
+!   - Controls phytoplankton bloom magnitude/duration
+!
+! Validation:
+!   - Gut content analysis & pigment measurements
+!   - Dilution experiments (Landry-Hassett method)
+!   - Typical rates: 0.01-10 mmolC m-3 day-1
+!   - Clearance rates: 1-100 mL ind-1 day-1
+!---------------------------------------------------------------------------
+
+        ! Total assimilated grazing (with efficiency applied)
+        vertgrazmeso_tot(k) = vertgrazmeso_tot(k) + (          &
+        + grazingFlux_phy * recipQuota * grazEff               &  ! Nanophytoplankton
+        + grazingFlux_Dia * recipQuota_Dia * grazEff           &  ! Diatoms
+        + grazingFlux_Det * recipDet * grazEff                 &  ! Detritus 1
+        ) * recipbiostep
+       
+        if (enable_coccos) then
+            vertgrazmeso_tot(k) = vertgrazmeso_tot(k) + ( &
+            + grazingFlux_Cocco * recipQuota_Cocco * grazEff &  ! Coccolithophores
+            + grazingFlux_Phaeo * recipQuota_Phaeo * grazEff &  ! Phaeocystis
+            ) * recipbiostep
+        endif
+
+        if (enable_3zoo2det) then
+            vertgrazmeso_tot(k) = vertgrazmeso_tot(k) + (      &
+            + GrazingFlux_DetZ2 * recipDet2 * grazEff          &  ! Detritus 2
+            + grazingFlux_miczoo * recipQZoo3 * grazEff        &  ! Microzooplankton
+            ) * recipbiostep
+        endif
+
+        ! Prey-specific mortality (loss terms, no efficiency applied)
+        ! These track carbon removal from each prey population
+        
+        ! Small phytoplankton mortality
+        vertgrazmeso_n(k) = vertgrazmeso_n(k) + ( &
+        + grazingFlux_phy * recipQuota             &
+        ) * recipbiostep
+        
+        ! Diatom mortality
+        vertgrazmeso_d(k) = vertgrazmeso_d(k) + ( &
+        + grazingFlux_dia * recipQuota_dia         &
+        ) * recipbiostep
+
+        if (enable_coccos) then
+            ! Coccolithophore mortality
+            vertgrazmeso_c(k) = vertgrazmeso_c(k) + ( &
+            + grazingFlux_Cocco * recipQuota_cocco     &
+            ) * recipbiostep
+
+            ! Phaeocystis mortality
+            vertgrazmeso_p(k) = vertgrazmeso_p(k) + ( &
+            + grazingFlux_Phaeo * recipQuota_Phaeo     &
+            ) * recipbiostep
+        endif
+
+        ! Detritus 1 consumption
+        vertgrazmeso_det(k) = vertgrazmeso_det(k) + ( &
+        + grazingFlux_Det * recipDet                   &
+        ) * recipbiostep
+        
+        if (enable_3zoo2det) then
+            ! Microzooplankton mortality (intraguild predation)
+            vertgrazmeso_mic(k) = vertgrazmeso_mic(k) + ( &
+            + grazingFlux_miczoo * recipQZoo3              &
+            ) * recipbiostep
+            
+            ! Detritus 2 consumption
+            vertgrazmeso_det2(k) = vertgrazmeso_det2(k) + ( &
+            + GrazingFlux_DetZ2 * recipDet2                 &
+            ) * recipbiostep
+        endif
+
+
+
+!===========================================================================
+! MACROZOOPLANKTON GRAZING (KRILL)
+!===========================================================================
+! Tracks grazing by macrozooplankton (2-20 mm), often dominated by krill
+! Top mesozooplankton predator with omnivorous feeding strategy
+!
+! Variables:
+!   vertgrazmacro_tot(k)  : Total assimilated grazing [mmolC m-3 day-1]
+!   vertgrazmacro_n(k)    : Grazing on small phytoplankton [mmolC m-3 day-1]
+!   vertgrazmacro_d(k)    : Grazing on diatoms [mmolC m-3 day-1]
+!   vertgrazmacro_c(k)    : Grazing on coccolithophores [mmolC m-3 day-1]
+!   vertgrazmacro_p(k)    : Grazing on Phaeocystis [mmolC m-3 day-1]
+!   vertgrazmacro_mes(k)  : Grazing on mesozooplankton [mmolC m-3 day-1]
+!   vertgrazmacro_mic(k)  : Grazing on microzooplankton [mmolC m-3 day-1]
+!   vertgrazmacro_det(k)  : Grazing on detritus 1 [mmolC m-3 day-1]
+!   vertgrazmacro_det2(k) : Grazing on detritus 2 [mmolC m-3 day-1]
+!
+! Prey Composition:
+!   PHY    : Small phytoplankton - supplementary prey
+!   DIA    : Diatoms - preferred prey in productive waters
+!   COCCO  : Coccolithophores (optional)
+!   PHAEO  : Phaeocystis colonies (optional)
+!   HET    : Mesozooplankton - carnivory/cannibalism
+!   MICZOO : Microzooplankton - smaller zooplankton
+!   DET    : Detritus 1 - opportunistic feeding
+!   DET2   : Detritus 2 - larger particles
+!
+! Ecological Significance:
+!   - Grazing efficiency (grazEff2): typically 30-60%
+!   - Major prey for fish, seabirds, marine mammals
+!   - Produces large, fast-sinking fecal pellets
+!   - Vertical migration enhances carbon export
+!   - Key species: Antarctic krill (Euphausia superba)
+!
+! Validation:
+!   - Net tows & acoustic surveys for biomass
+!   - Feeding experiments with size-fractionated prey
+!   - Typical rates: 0.1-50 mmolC m-3 day-1
+!   - Individual ingestion: 10-100% body C day-1
+!---------------------------------------------------------------------------
+
+        if (enable_3zoo2det) then
+            
+            ! Total assimilated grazing (with efficiency applied)
+            vertgrazmacro_tot(k) = vertgrazmacro_tot(k) + (    &
+            + grazingFlux_phy2 * recipQuota * grazEff2          &  ! Small phytoplankton
+            + grazingFlux_Dia2 * recipQuota_Dia * grazEff2      &  ! Diatoms
+            + grazingFlux_het2 * recipQZoo * grazEff2           &  ! Mesozooplankton
+            + grazingFlux_miczoo2 * recipQZoo3 * grazEff2       &  ! Microzooplankton
+            + grazingFlux_Det2 * recipDet * grazEff2            &  ! Detritus 1
+            + grazingFlux_DetZ22 * recipDet2 * grazEff2         &  ! Detritus 2
+            ) * recipbiostep
+            
+            if (enable_coccos) then
+                vertgrazmacro_tot(k) = vertgrazmacro_tot(k) + ( &
+                + grazingFlux_Cocco2 * recipQuota_Cocco * grazEff2 &  ! Coccolithophores
+                + grazingFlux_Phaeo2 * recipQuota_Phaeo * grazEff2 &  ! Phaeocystis
+                ) * recipbiostep
+            endif
+
+            ! Prey-specific mortality (loss terms, no efficiency applied)
+            ! These track carbon removal from each prey population
+            
+            ! Small phytoplankton mortality
+            vertgrazmacro_n(k) = vertgrazmacro_n(k) + ( &
+            + grazingFlux_phy2 * recipQuota              &
+            ) * recipbiostep
+            
+            ! Diatom mortality
+            vertgrazmacro_d(k) = vertgrazmacro_d(k) + ( &
+            + grazingFlux_Dia2 * recipQuota_Dia          &
+            ) * recipbiostep
+            
+            if (enable_coccos) then
+                ! Coccolithophore mortality
+                vertgrazmacro_c(k) = vertgrazmacro_c(k) + ( &
+                + grazingFlux_Cocco2 * recipQuota_cocco      &
+                ) * recipbiostep
+
+                ! Phaeocystis mortality
+                vertgrazmacro_p(k) = vertgrazmacro_p(k) + ( &
+                + grazingFlux_Phaeo2 * recipQuota_Phaeo      &
+                ) * recipbiostep
+            endif
+            
+            ! Mesozooplankton mortality (carnivory)
+            vertgrazmacro_mes(k) = vertgrazmacro_mes(k) + ( &
+            + grazingFlux_het2 * recipQZoo                   &
+            ) * recipbiostep
+            
+            ! Detritus 1 consumption
+            vertgrazmacro_det(k) = vertgrazmacro_det(k) + ( &
+            + grazingFlux_Det2 * recipDet                    &
+            ) * recipbiostep
+            
+            ! Microzooplankton mortality
+            vertgrazmacro_mic(k) = vertgrazmacro_mic(k) + ( &
+            + grazingFlux_miczoo2 * recipQZoo3               &
+            ) * recipbiostep
+            
+            ! Detritus 2 consumption
+            vertgrazmacro_det2(k) = vertgrazmacro_det2(k) + ( &
+            + GrazingFlux_DetZ22 * recipDet2                   &
+            ) * recipbiostep
+            
+        endif
+
+!===========================================================================
+! MICROZOOPLANKTON GRAZING
+!===========================================================================
+! Tracks grazing by microzooplankton (20-200 μm), mainly ciliates/dinoflagellates
+! Critical link between picoplankton and mesozooplankton
+!
+! Variables:
+!   vertgrazmicro_tot(k) : Total assimilated grazing [mmolC m-3 day-1]
+!   vertgrazmicro_n(k)   : Grazing on nanophytoplankton [mmolC m-3 day-1]
+!   vertgrazmicro_d(k)   : Grazing on diatoms [mmolC m-3 day-1]
+!   vertgrazmicro_c(k)   : Grazing on coccolithophores [mmolC m-3 day-1]
+!   vertgrazmicro_p(k)   : Grazing on Phaeocystis [mmolC m-3 day-1]
+!
+! Prey Composition:
+!   PHY   : Snall phytoplankton (2-20 μm) - primary prey
+!   DIA   : Small diatoms - when available
+!   COCCO : Coccolithophores - calcifying prey (optional)
+!   PHAEO : Phaeocystis colonies/single cells (optional)
+!
+! Ecological Significance:
+!   - Grazing efficiency (grazEff3): typically 40-70%
+!   - Consumes 60-100% of primary production in oligotrophic waters
+!   - High growth rates (1-2 doublings day-1 at 20°C)
+!   - Size-selective feeding (optimal prey 10-50% predator size)
+!   - Regenerates nutrients in upper water column
+!
+! Validation:
+!   - Dilution experiments (most common method)
+!   - Epifluorescence microscopy for biomass
+!   - Typical rates: 0.01-5 mmolC m-3 day-1
+!   - Clearance rates: 10-10,000 nL ind-1 hour-1
+!---------------------------------------------------------------------------
+
+        if (enable_3zoo2det) then
+            
+            ! Total assimilated grazing (with efficiency applied)
+            vertgrazmicro_tot(k) = vertgrazmicro_tot(k) + (     &
+            + grazingFlux_phy3 * recipQuota * grazEff3           &  ! Small phytoplankton
+            + grazingFlux_Dia3 * recipQuota_Dia * grazEff3       &  ! Diatoms
+            ) * recipbiostep
+            
+            if (enable_coccos) then
+                vertgrazmicro_tot(k) = vertgrazmicro_tot(k) + ( &
+                + grazingFlux_Cocco3 * recipQuota_Cocco * grazEff3 &  ! Coccolithophores
+                + grazingFlux_Phaeo3 * recipQuota_Phaeo * grazEff3 &  ! Phaeocystis
+                ) * recipbiostep
+            endif
+            
+            ! Prey-specific mortality (loss terms, no efficiency applied)
+            ! These track carbon removal from each prey population
+            
+            ! Small phytoplankton mortality
+            vertgrazmicro_n(k) = vertgrazmicro_n(k) + ( &
+            + grazingFlux_phy3 * recipQuota              &
+            ) * recipbiostep
+            
+            ! Diatom mortality
+            vertgrazmicro_d(k) = vertgrazmicro_d(k) + ( &
+            + grazingFlux_Dia3 * recipQuota_Dia          &
+            ) * recipbiostep
+            
+            if (enable_coccos) then
+                ! Coccolithophore mortality
+                vertgrazmicro_c(k) = vertgrazmicro_c(k) + ( &
+                + grazingFlux_Cocco3 * recipQuota_cocco      &
+                ) * recipbiostep
+
+                ! Phaeocystis mortality
+                vertgrazmicro_p(k) = vertgrazmicro_p(k) + ( &
+                + grazingFlux_Phaeo3 * recipQuota_Phaeo      &
+                ) * recipbiostep
+            endif
+            
+        endif
+        
+    end if ! Grazing_detritus
+
+                !===========================================================================
                 ! ZOOPLANKTON RESPIRATION
                 !===========================================================================
                 ! Tracks heterotrophic respiration (metabolic CO2 release)

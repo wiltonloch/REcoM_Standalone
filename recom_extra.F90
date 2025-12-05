@@ -10,7 +10,7 @@ module recom_extra
             real(kind=WP), intent(in), dimension(:,:)  :: hnode, zbar_3d_n
 
             ! Output arrays
-            real(kind=8), dimension(nl,5), intent(out) :: wf          ! [m/day] Flux velocities at the border of the control volumes
+            real(kind=8), dimension(nl,6), intent(out) :: wf          ! [m/day] Flux velocities at the border of the control volumes
             real(kind=8), dimension(nl),   intent(out) :: zf          ! [m] Depth of vertical fluxes
             real(kind=8), dimension(nl-1), intent(out) :: thick       ! [m] Distance between two nodes = layer thickness
             real(kind=8), dimension(nl-1), intent(out) :: recipthick  ! [1/m] Reciprocal thickness
@@ -60,7 +60,7 @@ subroutine Depth_calculations(n, nn, wf, zf, thick, recipthick, myDim_nod2D, eDi
     real(kind=WP), intent(in), dimension(:,:) :: hnode, zbar_3d_n
 
     ! Output arrays
-    real(kind=8), dimension(nl,5), intent(out)  :: wf          ! [m/day] Flux velocities at the border of the control volumes
+    real(kind=8), dimension(nl,6), intent(out)  :: wf          ! [m/day] Flux velocities at the border of the control volumes
     real(kind=8), dimension(nl),   intent(out)  :: zf          ! [m] Depth of vertical fluxes
     real(kind=8), dimension(nl-1), intent(out)  :: thick       ! [m] Distance between two nodes = layer thickness
     real(kind=8), dimension(nl-1), intent(out)  :: recipthick  ! [1/m] Reciprocal thickness
@@ -88,7 +88,7 @@ subroutine Depth_calculations(n, nn, wf, zf, thick, recipthick, myDim_nod2D, eDi
     wF(2:Nn, ivdet)   = VDet      ! Detritus sinking velocity
     wF(2:Nn, ivdetsc) = VDet_zoo2 ! Second detritus sinking velocity
     wF(2:Nn, ivcoc)   = VCocco    ! Coccolithophores sinking velocity
-    wF(2:Nn, ivpha)   = VPhaeo
+    wF(2:Nn, ivpha)   = VPhaeo    ! Phaeocystis sinking velocity
 
     !! Boundary conditions (surface and bottom)
     wF(1,:)          = 0.d0
@@ -113,12 +113,12 @@ subroutine Depth_calculations(n, nn, wf, zf, thick, recipthick, myDim_nod2D, eDi
         else
          recipthick(k) = 0.0_WP
         end if
-     end do
+    end do
 
-     !! set layer depth (negative)
-     do k=1, nn+1
+    !! set layer depth (negative)
+    do k=1, nn+1
         zf(k)=zbar_3d_n(k,n)
-     end do
+    end do
   
 end subroutine Depth_calculations
 
