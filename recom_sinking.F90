@@ -856,11 +856,6 @@ subroutine get_particle_density(tracers, partit, mesh)
     real(kind=8)                          :: b4(mesh%nl-1, partit%myDim_nod2D+partit%eDim_nod2D)
     real(kind=8)                          :: aux(mesh%nl-1, partit%myDim_nod2D+partit%eDim_nod2D)
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
-
     num_tracers=tracers%num_tracers
 
     rho_particle1 = 0.0
@@ -878,9 +873,9 @@ subroutine get_particle_density(tracers, partit, mesh)
         if (tracers%data(tr_num)%ID==1021)  b4 = max(tiny,tracers%data(tr_num)%values(:,:)) !idetcal    ! [mmol m-3] detritus CaCO3
     end do
 
-    do row=1,myDim_nod2d
-        nzmin = ulevels_nod2D(row)
-        nzmax = nlevels_nod2D(row)
+    do row=1, partit%myDim_nod2d
+        nzmin = mesh%ulevels_nod2D(row)
+        nzmax = mesh%nlevels_nod2D(row)
         aux(nzmin:nzmax,row) = b1(nzmin:nzmax,row)+b2(nzmin:nzmax,row)+b3(nzmin:nzmax,row)+b4(nzmin:nzmax,row)
         a1(nzmin:nzmax,row)  = b1(nzmin:nzmax,row)/aux(nzmin:nzmax,row)
         a2(nzmin:nzmax,row)  = b2(nzmin:nzmax,row)/aux(nzmin:nzmax,row)
@@ -903,10 +898,10 @@ subroutine get_particle_density(tracers, partit, mesh)
         if (tracers%data(tr_num)%ID==1028)  b4 = max(tiny,tracers%data(tr_num)%values(:,:)) !idetz2calc
     end do
 
-    do row=1,myDim_nod2d+eDim_nod2D   ! myDim is sufficient
+    do row=1, partit%myDim_nod2d + partit%eDim_nod2D   ! myDim is sufficient
         !if (ulevels_nod2D(row)>1) cycle
-        nzmin = ulevels_nod2D(row)
-        nzmax = nlevels_nod2D(row)
+        nzmin = mesh%ulevels_nod2D(row)
+        nzmax = mesh%nlevels_nod2D(row)
         aux(nzmin:nzmax,row) = b1(nzmin:nzmax,row)+b2(nzmin:nzmax,row)+b3(nzmin:nzmax,row)+b4(nzmin:nzmax,row)
         a1(nzmin:nzmax,row)  = b1(nzmin:nzmax,row)/aux(nzmin:nzmax,row)
         a2(nzmin:nzmax,row)  = b2(nzmin:nzmax,row)/aux(nzmin:nzmax,row)
