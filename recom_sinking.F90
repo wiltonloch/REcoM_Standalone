@@ -824,20 +824,12 @@ end subroutine ballast
 !-------------------------------------------------------------------------------
 subroutine get_particle_density(tracers, partit, mesh)
 
-    use MOD_MESH
-    use MOD_PARTIT
-    use MOD_PARSUP
-    use MOD_TRACER
+    use MOD_MESH, only: t_mesh
+    use MOD_PARTIT, only: t_partit
+    use MOD_TRACER, only: t_tracer
 
     use recom_config
     use recom_glovar
-    USE o_PARAM
-    USE o_ARRAYS
-    USE g_CONFIG
-    use g_forcing_arrays
-    use g_comm_auto
-    use g_clock
-    use g_rotate_grid
 
     implicit none
     type(t_tracer), intent(inout), target :: tracers
