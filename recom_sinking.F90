@@ -739,11 +739,6 @@ subroutine ballast(tr_num, tracers, partit, mesh)
     real(kind=8)                          :: Lon_degree(1)
     real(kind=8)                          :: Lat_degree(1)
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
-
   ! For ballasting, calculate scaling factors here and pass them to FESOM, where sinking velocities are calculated
      ! -----
      ! If ballasting is used, sinking velocities are a function of a) particle composition (=density),
@@ -755,21 +750,21 @@ subroutine ballast(tr_num, tracers, partit, mesh)
 !     call get_particle_density(mesh) ! rho_particle = density of particle class 1 and 2
      !___________________________________________________________________________
      ! loop over local nodes
-     do row=1,myDim_nod2D
+     do row=1, partit%myDim_nod2D
          ! max. number of levels at node n
-        nzmin = ulevels_nod2D(row)
-        nzmax = nlevels_nod2D(row)
+        nzmin = mesh%ulevels_nod2D(row)
+        nzmax = mesh%nlevels_nod2D(row)
          !! lon
-        Lon_degree(1)=geo_coord_nod2D(1,row)/rad !! convert from rad to degree
+        Lon_degree(1)=mesh%geo_coord_nod2D(1,row)/rad !! convert from rad to degree
          !! lat
-        Lat_degree(1)=geo_coord_nod2D(2,row)/rad !! convert from rad to degree
+        Lat_degree(1)=mesh%geo_coord_nod2D(2,row)/rad !! convert from rad to degree
 
         ! get scaling vectors -> these need to be passed to FESOM to get sinking velocities
         ! get local seawater density
         do k=nzmin, nzmax
 
            !! level depth
-           depth_pos(1) = abs(Z_3d_n(k,row))  ! take depth of tracers instead of levels abs(zbar_3d_n(k,row))
+           depth_pos(1) = abs(mesh%Z_3d_n(k,row))  ! take depth of tracers instead of levels abs(zbar_3d_n(k,row))
 
            call depth2press(depth_pos(1), Lat_degree(1), pres, 1)  ! pres is output of function,1=number of records
            sa           = gsw_sa_from_sp(tracers%data(2)%values(k,row), pres, Lon_degree(1), Lat_degree(1))
