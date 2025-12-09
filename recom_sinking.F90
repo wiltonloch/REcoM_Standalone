@@ -914,19 +914,11 @@ end subroutine get_particle_density
 
 subroutine get_seawater_viscosity(tr_num, tracers, partit, mesh)
 
-  use recom_config
-  use recom_glovar
-    use MOD_MESH
-    use MOD_PARTIT
-    use MOD_PARSUP
-    use MOD_TRACER
-    use o_PARAM
-    use o_ARRAYS
-    use g_CONFIG
-    use g_forcing_arrays
-    use g_comm_auto
-    use g_clock
-    use g_rotate_grid
+    use recom_config
+    use recom_glovar
+    use MOD_MESH, only: t_mesh
+    use MOD_PARTIT, only: t_partit
+    use MOD_TRACER, only: t_tracer
 
     implicit none
 
