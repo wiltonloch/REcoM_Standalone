@@ -942,18 +942,13 @@ subroutine get_seawater_viscosity(tr_num, tracers, partit, mesh)
     type(t_partit), intent(inout), target :: partit
     type(t_mesh)  , intent(in)   , target :: mesh
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
-
     seawater_visc_3D(:,:) = 0.0
-    do row=1,myDim_nod2d
+    do row=1, partit%myDim_nod2d
      !if (ulevels_nod2D(row)>1) cycle
 ! OG Do we need any limitation here?
 ! i.e., if (seawater_visc_3D(row)<=0.0_WP) cycle
-        nzmin = ulevels_nod2D(row)
-        nzmax = nlevels_nod2D(row)
+        nzmin = mesh%ulevels_nod2D(row)
+        nzmax = mesh%nlevels_nod2D(row)
 
         do k=nzmin, nzmax
      ! Eq from Sharaway 2010
