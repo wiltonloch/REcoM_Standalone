@@ -706,24 +706,16 @@ end subroutine ver_sinking_recom
 !-------------------------------------------------------------------------------
 subroutine ballast(tr_num, tracers, partit, mesh)
 
-    use MOD_MESH
-    use MOD_PARTIT
-    use MOD_PARSUP
-    use MOD_TRACER
+    use MOD_MESH, only: t_mesh
+    use MOD_PARTIT, only: t_partit
+    use MOD_TRACER, only: t_tracer
 
     use recom_config
     use recom_glovar
 
-    use o_PARAM
-    use o_ARRAYS
-    use g_CONFIG
-    use g_forcing_arrays
-    use g_comm_auto
-    use g_clock
-    use g_rotate_grid
-    use mvars
-    use mdepth2press
-    use gsw_mod_toolbox, only: gsw_sa_from_sp,gsw_ct_from_pt,gsw_rho
+    use o_PARAM, only: wp, rad
+    use mdepth2press, only: depth2press
+    use gsw_mod_toolbox, only: gsw_sa_from_sp, gsw_ct_from_pt,gsw_rho
 
     implicit none
     integer       , intent(in)   , target :: tr_num
