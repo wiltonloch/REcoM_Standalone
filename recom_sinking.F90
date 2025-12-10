@@ -482,11 +482,6 @@ subroutine ver_sinking_recom(tr_num, tracers, partit, mesh)
 
     real(kind=WP), dimension(:,:), pointer :: trarr
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
-
     trarr=>tracers%data(tr_num)%values(:,:)
 
 !< calculate scaling factors
@@ -560,17 +555,17 @@ subroutine ver_sinking_recom(tr_num, tracers, partit, mesh)
 !! ---- No sinking if Vsink < 0.1 m/day
 if (Vsink .gt. 0.1) then
 
-   do n = 1,myDim_nod2D
-      if (ulevels_nod2D(n)>1) cycle
-      nzmin = ulevels_nod2D(n)
-      nzmax = nlevels_nod2D(n)-1
+   do n = 1, partit%myDim_nod2D
+      if (mesh%ulevels_nod2D(n)>1) cycle
+      nzmin = mesh%ulevels_nod2D(n)
+      nzmax = mesh%nlevels_nod2D(n)-1
 
       !! distance between tracer points, surface and bottom dz_trr is half
       !! the layer thickness
       dz_trr                = 0.0d0
-      dz_trr(nzmin+1:nzmax) = abs(Z_3d_n(nzmin:nzmax-1,n)-Z_3d_n(nzmin+1:nzmax,n))
-      dz_trr(nzmin)         = hnode(nzmin,n)/2.0d0
-      dz_trr(nzmax+1)       = hnode(nzmax,n)/2.0d0
+      dz_trr(nzmin+1:nzmax) = abs(mesh%Z_3d_n(nzmin:nzmax-1,n)-mesh%Z_3d_n(nzmin+1:nzmax,n))
+      dz_trr(nzmin)         = mesh%hnode(nzmin,n)/2.0d0
+      dz_trr(nzmax+1)       = mesh%hnode(nzmax,n)/2.0d0
 
       Wvel_flux(nzmin:nzmax+1)= 0.d0  ! Vertical velocity for BCG tracers
 
@@ -579,7 +574,7 @@ if (Vsink .gt. 0.1) then
          Wvel_flux(nz) = -Vsink/SecondsPerDay ! allow_var_sinking = .false.
 
          if (allow_var_sinking) then
-            Wvel_flux(nz) = -((Vdet_a * abs(zbar_3d_n(nz,n))/SecondsPerDay) + Vsink/SecondsPerDay)
+            Wvel_flux(nz) = -((Vdet_a * abs(mesh%zbar_3d_n(nz,n))/SecondsPerDay) + Vsink/SecondsPerDay)
             if (use_ballasting) then
 ! Apply ballasting on slow sinking detritus
 !if (any(recom_sinking_tracer_id == tracer_id(tr_num))) then
@@ -590,7 +585,7 @@ if (Vsink .gt. 0.1) then
                     tracers%data(tr_num)%ID ==1021 ) then     !idetcal
                 Wvel_flux(nz) = w_ref1 * scaling_density1_3D(nz,n) * scaling_visc_3D(nz,n)
 
-                if (depth_scaling1.gt.0.0) Wvel_flux(nz) = Wvel_flux(nz) + (depth_scaling1 * abs(zbar_3d_n(nz,n)))
+                if (depth_scaling1.gt.0.0) Wvel_flux(nz) = Wvel_flux(nz) + (depth_scaling1 * abs(mesh%zbar_3d_n(nz,n)))
 
                 if (abs(Wvel_flux(nz)) .gt. max_sinking_velocity) Wvel_flux(nz) = max_sinking_velocity
 
@@ -612,7 +607,7 @@ if (Vsink .gt. 0.1) then
 
                   Wvel_flux(nz) = w_ref2*scaling_density2_3D(nz,n)*scaling_visc_3D(nz,n)
 
-                  if (depth_scaling2.gt.0.0) Wvel_flux(nz) = Wvel_flux(nz) + (depth_scaling2 * abs(zbar_3d_n(nz,n)))
+                  if (depth_scaling2.gt.0.0) Wvel_flux(nz) = Wvel_flux(nz) + (depth_scaling2 * abs(mesh%zbar_3d_n(nz,n)))
 
                   if (abs(Wvel_flux(nz)) .gt. max_sinking_velocity) Wvel_flux(nz) = max_sinking_velocity
 
@@ -635,9 +630,9 @@ if (Vsink .gt. 0.1) then
 !FIXME: Having IF True and IF False is bad practice. Either throw away the old code, or make a namelist switch...
 if (.TRUE.) then ! 3rd Order DST Sceheme with flux limiting. This code comes from old recom
 
-      k=nod_in_elem2D_num(n)
+      k= mesh%nod_in_elem2D_num(n)
       ! Screening minimum depth in neigbouring nodes around node n
-      nlevels_nod2D_minimum=minval(nlevels(nod_in_elem2D(1:k, n))-1)
+      nlevels_nod2D_minimum=minval(mesh%nlevels(mesh%nod_in_elem2D(1:k, n))-1)
 
       vd_flux(nzmin:nzmax+1)= 0.0_WP
 
@@ -667,7 +662,7 @@ if (.TRUE.) then ! 3rd Order DST Sceheme with flux limiting. This code comes fro
 
          tv= (0.5 * wPs * (trarr(nz,n)              + psiM * Rj)+ &
               0.5 * wM  * (trarr(max(nzmin,nz-1),n) + psiP * Rj))
-         vd_flux(nz)= - tv*area(nz,n)
+         vd_flux(nz)= - tv* mesh%area(nz,n)
       end do
 end if ! 3rd Order DST Sceheme with flux limiting
 
@@ -679,9 +674,9 @@ if (.FALSE.) then ! simple upwind
       ! Bottom flux
       vd_flux(nzmax+1)= 0.0_WP
 
-      k=nod_in_elem2D_num(n)
+      k= mesh%nod_in_elem2D_num(n)
       ! Screening minimum depth in neigbouring nodes around node n
-      nlevels_nod2D_minimum=minval(nlevels(nod_in_elem2D(1:k, n))-1)
+      nlevels_nod2D_minimum=minval(mesh%nlevels(mesh%nod_in_elem2D(1:k, n))-1)
 
       do nz=nzmin+1,nzmax !nlevels_nod2D_minimum-1
 !         tv = trarr(nz,n)                                ! simple scheme       - test1
@@ -690,12 +685,12 @@ if (.FALSE.) then ! simple upwind
          tv = - 0.5* & ! - test3
             (trarr(nz-1,n)*(Wvel_flux(nz)-abs(Wvel_flux(nz))) + &
              trarr(nz  ,n)*(Wvel_flux(nz)+abs(Wvel_flux(nz))))
-         vd_flux(nz)= tv*area(nz,n)
+         vd_flux(nz)= tv* mesh%area(nz,n)
 
       end do
 end if ! simple upwind
       do nz=nzmin,nzmax
-         vert_sink(nz,n) = vert_sink(nz,n) + (vd_flux(nz)-vd_flux(nz+1))*dt/areasvol(nz,n)/hnode_new(nz,n) !/(zbar_3d_n(nz,n)-zbar_3d_n(nz+1,n))
+         vert_sink(nz,n) = vert_sink(nz,n) + (vd_flux(nz)-vd_flux(nz+1))*dt/mesh%areasvol(nz,n)/ mesh%hnode_new(nz,n) !/(zbar_3d_n(nz,n)-zbar_3d_n(nz+1,n))
       end do
    end do
 end if ! Vsink .gt. 0.1
