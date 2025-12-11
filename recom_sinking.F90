@@ -331,11 +331,6 @@ subroutine diff_ver_recom_expl(tr_num, tracers, partit, mesh)
 
     real(kind=WP), dimension(:,:), pointer :: trarr
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
-
     trarr=>tracers%data(tr_num)%values(:,:)
 
 
@@ -351,24 +346,24 @@ if (use_MEDUSA .and. (sedflx_num .ne. 0)) then
 
    SELECT CASE (id)
     CASE (1001)
-      bottom_flux = GloSed(:,1) * area(1,:) ! DIN
+      bottom_flux = GloSed(:,1) * mesh%area(1,:) ! DIN
     CASE (1002)
-      bottom_flux = GloSed(:,2) * area(1,:) ! DIC
+      bottom_flux = GloSed(:,2) * mesh%area(1,:) ! DIC
     CASE (1003)
-      bottom_flux = GloSed(:,3) * area(1,:) ! Alk
+      bottom_flux = GloSed(:,3) * mesh%area(1,:) ! Alk
     CASE (1018)
-      bottom_flux = GloSed(:,4) * area(1,:) ! Si
+      bottom_flux = GloSed(:,4) * mesh%area(1,:) ! Si
     CASE (1019)
-      bottom_flux = GloSed(:,1) * Fe2N_benthos * area(1,:)
+      bottom_flux = GloSed(:,1) * Fe2N_benthos * mesh%area(1,:)
     CASE (1022)
-      bottom_flux = GloSed(:,5) * area(1,:) ! Oxy
+      bottom_flux = GloSed(:,5) * mesh%area(1,:) ! Oxy
     CASE (1302)
       if (ciso) then
-        bottom_flux = GloSed(:,6) * area(1,:) ! DIC_13 and Calc: DIC_13
+        bottom_flux = GloSed(:,6) * mesh%area(1,:) ! DIC_13 and Calc: DIC_13
       end if
     CASE (1402)
       if (ciso) then
-        bottom_flux = GloSed(:,7) * area(1,:) ! DIC_14 and Calc: DIC_14
+        bottom_flux = GloSed(:,7) * mesh%area(1,:) ! DIC_14 and Calc: DIC_14
       end if
     CASE DEFAULT
       if (partit%mype==0) then
@@ -411,30 +406,30 @@ else
 endif ! (use_MEDUSA .and. (sedflux_num .gt. 0))  
 #endif
 
-    do n=1, myDim_nod2D
+    do n=1, partit%myDim_nod2D
 
-        nl1=nlevels_nod2D(n)-1
-        ul1=ulevels_nod2D(n)
+        nl1=mesh%nlevels_nod2D(n)-1
+        ul1=mesh%ulevels_nod2D(n)
 
         vd_flux=0._WP
 
-        k=nod_in_elem2D_num(n)
+        k=mesh%nod_in_elem2D_num(n)
         ! Screening minimum depth in neigbouring nodes around node n
-        nlevels_nod2D_minimum=minval(nlevels(nod_in_elem2D(1:k, n))-1)
+        nlevels_nod2D_minimum=minval(mesh%nlevels(mesh%nod_in_elem2D(1:k, n))-1)
 
         !_______________________________________________________________________
         ! Bottom flux
         do nz=nlevels_nod2D_minimum, nl1
-            vd_flux(nz)=(area(nz,n)-area(nz+1,n))* bottom_flux(n)/(area(1,n))  !!!!!!!!
+            vd_flux(nz)=(mesh%area(nz,n)-mesh%area(nz+1,n))* bottom_flux(n)/(mesh%area(1,n))  !!!!!!!!
         end do
         nz=nl1
-        vd_flux(nz+1)= (area(nz+1,n))* bottom_flux(n)/(area(1,n))
+        vd_flux(nz+1)= (mesh%area(nz+1,n))* bottom_flux(n)/(mesh%area(1,n))
         !_______________________________________________________________________
         ! writing flux into rhs
         do nz=ul1,nl1
             ! flux contribute only the cell through its bottom !!!
 !            dtr_bf(nz,n) = dtr_bf(nz,n) + vd_flux(nz+1)*dt/area(nz,n)/(zbar_3d_n(nz,n)-zbar_3d_n(nz+1,n))
-            dtr_bf(nz,n) = dtr_bf(nz,n) + vd_flux(nz+1)*dt/areasvol(nz,n)/hnode_new(nz,n)
+            dtr_bf(nz,n) = dtr_bf(nz,n) + vd_flux(nz+1)*dt/mesh%areasvol(nz,n)/mesh%hnode_new(nz,n)
         end do
     end do
 end subroutine diff_ver_recom_expl
