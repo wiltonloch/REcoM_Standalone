@@ -296,25 +296,18 @@ subroutine diff_ver_recom_expl(tr_num, tracers, partit, mesh)
 ! Remineralization from benthos
 ! bottom_flux
 
-    use MOD_MESH
-    use MOD_PARTIT
-    use MOD_PARSUP
-    use MOD_TRACER
+    use MOD_MESH, only: t_mesh
+    use MOD_PARTIT, only: t_partit
+    use MOD_TRACER, only: t_tracer
+    use g_clock, only: dt
+    use o_PARAM, only: wp
+    use o_arrays, only: dtr_bf
 
     use recom_declarations
     use recom_locvar
     use recom_glovar
     use recom_config
     use recom_ciso
-    ! use diff_ver_recom_expl_interface
-
-    use g_clock
-    use o_PARAM
-    use g_config
-    use o_param 
-    use o_arrays
-    use g_forcing_arrays
-    use g_comm_auto
 
     IMPLICIT NONE
 
