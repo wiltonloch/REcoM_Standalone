@@ -48,26 +48,21 @@ end module
 !===============================================================================
 subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
 
-    use MOD_MESH
-    use MOD_PARTIT
-    use MOD_PARSUP
-    use MOD_TRACER
+    use MOD_MESH, only: t_mesh
+    use MOD_PARTIT, only: t_partit
+    use MOD_TRACER, only: t_tracer
+
+    use g_clock, only: dt
+    use o_PARAM, only: wp
+    use o_arrays, only: str_bf
+    use g_comm_auto, only: exchange_nod
 
     use recom_declarations
     use recom_locvar
     use recom_glovar
     use recom_config
     use recom_ciso
-    ! use ver_sinking_recom_benthos_interface
 
-    use g_support
-    use g_clock
-    use o_PARAM
-    use g_config
-    use o_param           ! num_tracers
-    use o_arrays
-    use g_forcing_arrays  ! press_air
-    use g_comm_auto
     implicit none
 
     integer       , intent(in)   , target :: tr_num
