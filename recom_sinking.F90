@@ -82,16 +82,11 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
     real(kind=WP)             :: tv
     real(kind=WP), dimension(:,:), pointer :: trarr
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
-
     trarr=>tracers%data(tr_num)%values(:,:)
 
-   do n=1, myDim_nod2D ! needs exchange_nod in the end
-        nl1=nlevels_nod2D(n)-1
-        ul1=ulevels_nod2D(n)
+   do n=1, partit%myDim_nod2D ! needs exchange_nod in the end
+        nl1=mesh%nlevels_nod2D(n)-1
+        ul1=mesh%ulevels_nod2D(n)
 
         aux=0._WP
         Vben=0._WP
@@ -103,7 +98,7 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
           if (any(recom_phy_tracer_id == tracers%data(tr_num)%ID)) Vben = VPhy
           if (any(recom_dia_tracer_id == tracers%data(tr_num)%ID)) Vben = VDia
         if (allow_var_sinking) then
-          Vben = Vdet_a * abs(zbar_3d_n(:,n)) + Vben
+          Vben = Vdet_a * abs(mesh%zbar_3d_n(:,n)) + Vben
         end if
 
 ! Constant vertical sinking for the second detritus class
@@ -120,18 +115,18 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
 
         Vben= Vben/SecondsPerDay ! conversion [m/d] --> [m/s] (vertical velocity, note that it is positive here)
 
-        k=nod_in_elem2D_num(n)
+        k=mesh%nod_in_elem2D_num(n)
 
         !! * Screening minimum depth in neigbouring nodes around node n*
-        nlevels_nod2D_minimum=minval(nlevels(nod_in_elem2D(1:k, n))-1)
+        nlevels_nod2D_minimum=minval(mesh%nlevels(mesh%nod_in_elem2D(1:k, n))-1)
 
         do nz=nlevels_nod2D_minimum, nl1
            tv = trarr(nz,n)*Vben(nz)
-           aux(nz)= - tv*(area(nz,n)-area(nz+1,n))
+           aux(nz)= - tv*(mesh%area(nz,n)-mesh%area(nz+1,n))
         end do
 
         do nz=ul1,nl1
-           str_bf(nz,n) = str_bf(nz,n) + (aux(nz))*dt/area(nz,n)/(zbar_3d_n(nz,n)-zbar_3d_n(nz+1,n))
+           str_bf(nz,n) = str_bf(nz,n) + (aux(nz))*dt/mesh%area(nz,n)/(mesh%zbar_3d_n(nz,n)-mesh%zbar_3d_n(nz+1,n))
            add_benthos_2d(n) = add_benthos_2d(n) - (aux(nz))*dt    !!!!!!!!CHECK Maybe /area(nz,n) -> [mmol/m2]
         end do
 
@@ -144,7 +139,7 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
 
             if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-               SinkFlx_tr(n,1,tr_num) = SinkFlx_tr(n,1,tr_num) + add_benthos_2d(n) / area(1,n)/dt ![mmol/m2]
+               SinkFlx_tr(n,1,tr_num) = SinkFlx_tr(n,1,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt ![mmol/m2]
         ! now SinkFlx hat the unit mmol/time step 
         ! but mmol/m2/time is needed for MEDUSA: thus /area
             endif
@@ -164,7 +159,7 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
 
             if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-               SinkFlx_tr(n,2,tr_num) = SinkFlx_tr(n,2,tr_num) + add_benthos_2d(n) / area(1,n)/dt
+               SinkFlx_tr(n,2,tr_num) = SinkFlx_tr(n,2,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt
             endif
             if ((.not.use_MEDUSA).or.(sedflx_num.eq.0)) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
@@ -181,7 +176,7 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
 
             if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-               SinkFlx_tr(n,3,tr_num) = SinkFlx_tr(n,3,tr_num) + add_benthos_2d(n) / area(1,n)/dt
+               SinkFlx_tr(n,3,tr_num) = SinkFlx_tr(n,3,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt
             endif
             if ((.not.use_MEDUSA).or.(sedflx_num.eq.0)) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
@@ -198,7 +193,7 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
 
             if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-               SinkFlx_tr(n,4,tr_num) = SinkFlx_tr(n,4,tr_num) + add_benthos_2d(n) / area(1,n)/dt
+               SinkFlx_tr(n,4,tr_num) = SinkFlx_tr(n,4,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt
             endif
             if ((.not.use_MEDUSA).or.(sedflx_num.eq.0)) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
@@ -215,7 +210,7 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
 
                 if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-                   SinkFlx_tr(n,5,tr_num) = SinkFlx_tr(n,5,tr_num) + add_benthos_2d(n) / area(1,n)/dt
+                   SinkFlx_tr(n,5,tr_num) = SinkFlx_tr(n,5,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt
                 endif
                 if ((.not.use_MEDUSA).or.(sedflx_num.eq.0)) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
@@ -229,7 +224,7 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
 
                if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-                  SinkFlx_tr(n,6,tr_num) = SinkFlx_tr(n,6,tr_num) + add_benthos_2d(n) / area(1,n)/dt
+                  SinkFlx_tr(n,6,tr_num) = SinkFlx_tr(n,6,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt
                endif
                if ((.not.use_MEDUSA).or.(sedflx_num.eq.0)) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
@@ -248,7 +243,7 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
 
                if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-                  SinkFlx_tr(n,7,tr_num) = SinkFlx_tr(n,7,tr_num) + add_benthos_2d(n) / area(1,n)/dt
+                  SinkFlx_tr(n,7,tr_num) = SinkFlx_tr(n,7,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt
                endif
                if ((.not.use_MEDUSA).or.(sedflx_num.eq.0)) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
@@ -261,7 +256,7 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
                tracers%data(tr_num)%ID==1421 ) then  !idetcal
                if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-                  SinkFlx_tr(n,8,tr_num) = SinkFlx_tr(n,8,tr_num) + add_benthos_2d(n) / area(1,n)/dt
+                  SinkFlx_tr(n,8,tr_num) = SinkFlx_tr(n,8,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt
                endif
                if ((.not.use_MEDUSA).or.(sedflx_num.eq.0)) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
