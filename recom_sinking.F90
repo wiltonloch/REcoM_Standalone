@@ -442,25 +442,19 @@ end subroutine diff_ver_recom_expl
 subroutine ver_sinking_recom(tr_num, tracers, partit, mesh)
 ! Sinking in water column
 
-    use MOD_MESH
-    use MOD_PARTIT
-    use MOD_PARSUP
-    use MOD_TRACER
+    use MOD_MESH, only: t_mesh
+    use MOD_PARTIT, only: t_partit
+    use MOD_TRACER, only: t_tracer
+    use g_clock, only: dt
+    use o_param, only: wp
+    use o_arrays, only: vert_sink
 
     use REcoM_declarations
     use REcoM_LocVar
     use REcoM_GloVar
     use recom_config
     use REcoM_ciso
-    ! use ver_sinking_recom_interface
 
-    use g_clock
-    use o_PARAM
-    use g_config
-    use o_param
-    use o_arrays
-    use g_forcing_arrays
-    use g_comm_auto
     implicit none
 
     integer       , intent(in)   , target  :: tr_num
