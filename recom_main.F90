@@ -107,15 +107,10 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
     real(kind=8),  allocatable :: rhoSW_watercolumn(:)
     real(kind=WP)              :: ttf_rhs_bak (mesh%nl-1, tracers%num_tracers) ! local variable
 
-#include "../associate_part_def.h"
-#include "../associate_mesh_def.h"
-#include "../associate_part_ass.h"
-#include "../associate_mesh_ass.h"
-
-    allocate(Temp(nl-1), Sali_depth(nl-1), zr(nl-1) , PAR(nl-1))
-    allocate(C(nl-1, bgc_num))
-    allocate(CO2_watercolumn(nl-1), pH_watercolumn(nl-1), pCO2_watercolumn(nl-1) , HCO3_watercolumn(nl-1))
-    allocate(CO3_watercolumn(nl-1), OmegaC_watercolumn(nl-1), kspc_watercolumn(nl-1) , rhoSW_watercolumn(nl-1))
+    allocate(Temp(mesh%nl-1), Sali_depth(mesh%nl-1), zr(mesh%nl-1) , PAR(mesh%nl-1))
+    allocate(C(mesh%nl-1, bgc_num))
+    allocate(CO2_watercolumn(mesh%nl-1), pH_watercolumn(mesh%nl-1), pCO2_watercolumn(mesh%nl-1) , HCO3_watercolumn(mesh%nl-1))
+    allocate(CO3_watercolumn(mesh%nl-1), OmegaC_watercolumn(mesh%nl-1), kspc_watercolumn(mesh%nl-1) , rhoSW_watercolumn(mesh%nl-1))
 
     !< ice concentration [0 to 1]
 
@@ -128,7 +123,7 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
     if (restore_alkalinity) call bio_fluxes(tracers%data(2+ialk)%values(:,:), partit%MPI_COMM_FESOM, &
                                             partit%myDim_nod2D, partit%eDim_nod2D, mesh%ocean_area,  &
                                             mesh%ulevels_nod2D, mesh%areasvol)
-    if (recom_debug .and. mype==0) print *, achar(27)//'[36m'//'     --> bio_fluxes'//achar(27)//'[0m'
+    if (recom_debug .and. partit%mype==0) print *, achar(27)//'[36m'//'     --> bio_fluxes'//achar(27)//'[0m'
 
   if (use_atbox) then    ! MERGE
 ! Prognostic atmospheric isoCO2
@@ -138,7 +133,7 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
 !   optional I/O of isoCO2 and inferred cosmogenic 14C production; this may cost some CPU time
     if (ciso .and. ciso_14) then
       call annual_event(do_update)
-      if (do_update .and. mype==0) write (*, fmt = '(a50,2x,i6,4(2x,f6.2))') &
+      if (do_update .and. partit%mype==0) write (*, fmt = '(a50,2x,i6,4(2x,f6.2))') &
                                          'Year, xCO2 (ppm), cosmic 14C flux (at / cm² / s):', &
                                           yearold, x_co2atm(1), x_co2atm_13(1), x_co2atm_14(1), cosmic_14(1) * production_rate_to_flux_14
     end if
@@ -146,12 +141,12 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
 ! ======================================================================================
 !********************************* LOOP STARTS *****************************************
 
-    do n=1, myDim_nod2D  ! needs exchange_nod in the end
+    do n=1, partit%myDim_nod2D  ! needs exchange_nod in the end
 !     if (ulevels_nod2D(n)>1) cycle
 !       nzmin = ulevels_nod2D(n)
 
         !!---- Number of vertical layers
-        nzmax = nlevels_nod2D(n)-1
+        nzmax = mesh%nlevels_nod2D(n)-1
 
         !!---- This is needed for piston velocity
         Loc_ice_conc = a_ice(n)
@@ -197,7 +192,7 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
          LocAtmCO2_13              = AtmCO2_13(month)
          if (ciso_14) then
 !          Latitude of nodal point n 
-           lat_val = geo_coord_nod2D(2,n) / rad
+           lat_val = mesh%geo_coord_nod2D(2,n) / rad
 !          Zonally binned NH / SH / TZ 14CO2 input values
            LocAtmCO2_14 = AtmCO2_14(lat_zone(lat_val), month)
          end if
@@ -249,7 +244,7 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
         end do
 
         !!---- Depth of the nodes in the water column
-        zr(1:nzmax) = Z_3d_n(1:nzmax, n)
+        zr(1:nzmax) = mesh%Z_3d_n(1:nzmax, n)
 
         !!---- The PAR in the local water column is initialized
         PAR(1:nzmax) = 0.d0
@@ -260,7 +255,7 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
 
         if (Diags) then
             ! Allocate and initialize all diagnostic arrays for a water column
-            call allocate_and_init_diags(nl)
+            call allocate_and_init_diags(mesh%nl)
         end if
 !
 !        !! * Allocate 3D diagnostics *
@@ -372,7 +367,7 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
 !            vertChldegp = 0.d0
 !endif
 
-        if (recom_debug .and. mype==0) print *, achar(27)//'[36m'//'     --> REcoM_Forcing'//achar(27)//'[0m'
+        if (recom_debug .and. partit%mype==0) print *, achar(27)//'[36m'//'     --> REcoM_Forcing'//achar(27)//'[0m'
 
 ! ======================================================================================
 !******************************** RECOM FORCING ****************************************
@@ -407,7 +402,7 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
         Benthos(n,1:benthos_num) = LocBenthos(1:benthos_num)
         GlodecayBenthos(n, 1:benthos_num) = decayBenthos(1:benthos_num)/SecondsPerDay ! convert from [mmol/m2/d] to [mmol/m2/s]
 
-        if (recom_debug .and. mype==0) print *, achar(27)//'[36m'//'     --> ciso after REcoM_Forcing'//achar(27)//'[0m'
+        if (recom_debug .and. partit%mype==0) print *, achar(27)//'[36m'//'     --> ciso after REcoM_Forcing'//achar(27)//'[0m'
 
         if (Diags) then
            call update_2d_diags(n)
