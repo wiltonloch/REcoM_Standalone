@@ -36,15 +36,16 @@ module bio_fluxes_interface
 end module
 
 subroutine recom(ice, dynamics, tracers, partit, mesh)
-    use g_config
-    use MOD_MESH
-    use MOD_TRACER
-    use MOD_DYN
-    use MOD_ICE
-    use o_ARRAYS
-    use o_PARAM
-    use MOD_PARTIT
-    use MOD_PARSUP
+    use MOD_MESH, only: t_mesh
+    use MOD_TRACER, only: t_tracer
+    use MOD_DYN, only: t_dyn
+    use MOD_ICE, only: t_ice
+    use MOD_PARTIT, only: t_partit
+
+    use o_PARAM, only: wp, rad, kappa
+    use g_clock, only: dt, daynew, month, mstep, ndpyr, yearold
+    use g_forcing_arrays, only: press_air, u_wind, v_wind, shortwave
+    use g_comm_auto, only: exchange_nod
 
     use recom_declarations
     use bio_fluxes_interface
@@ -53,9 +54,6 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
     use recom_config
     use recom_ciso
     use recom_diags_management
-    use g_clock
-    use g_forcing_arrays, only: press_air, u_wind, v_wind, shortwave
-    use g_comm_auto
     use recom_forcing_module
 
     implicit none
