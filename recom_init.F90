@@ -20,11 +20,12 @@ end module
 !
 !_______________________________________________________________________________
 subroutine recom_init(tracers, partit, mesh)
-    USE MOD_MESH
-    USE MOD_PARTIT
-    USE MOD_PARSUP
-    USE MOD_TRACER
-    use g_clock
+    USE MOD_MESH, only: t_mesh
+    USE MOD_PARTIT, only: t_partit
+    USE MOD_TRACER, only: t_tracer
+    use o_param, only: wp, rad
+    use mpi
+
     use REcoM_declarations
     use REcoM_GloVar
     use REcoM_locVar
