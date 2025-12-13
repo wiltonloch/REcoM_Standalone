@@ -40,6 +40,21 @@ module ver_sinking_recom_benthos_interface
     end subroutine
   end interface
 end module
+
+module get_seawater_viscosity_interface
+  interface
+    subroutine get_seawater_viscosity(tr_num, myDim_nod2d, ulevels_nod2D, nlevels_nod2D, &
+                                      tracer_data_values_1, tracer_data_values_2)
+        use recom_config
+        use recom_glovar
+
+        integer,      intent(in)                  :: myDim_nod2d
+        integer,      intent(in), target          :: tr_num
+        real(kind=8), intent(in), dimension(:, :) :: tracer_data_values_1, tracer_data_values_2
+        integer,      intent(in), dimension(:)    :: ulevels_nod2D, nlevels_nod2D
+      end subroutine
+  end interface
+end module
 !===============================================================================
 ! YY: sinking of second detritus adapted from Ozgur's code
 ! but not using recom_det_tracer_id, since
@@ -866,13 +881,11 @@ end subroutine get_particle_density
 ! neglecting salinity effects, which are much smaller than those of temperature
 ! https://bitbucket.org/ohnoplus/ballasted-sinking/src/master/tools/waterviscosity.m
 
-subroutine get_seawater_viscosity(tr_num, tracers, partit, mesh)
+subroutine get_seawater_viscosity(tr_num, myDim_nod2d, ulevels_nod2D, nlevels_nod2D, &
+                                  tracer_data_values_1, tracer_data_values_2)
 
     use recom_config
     use recom_glovar
-    use MOD_MESH, only: t_mesh
-    use MOD_PARTIT, only: t_partit
-    use MOD_TRACER, only: t_tracer
 
     implicit none
 
@@ -880,21 +893,21 @@ subroutine get_seawater_viscosity(tr_num, tracers, partit, mesh)
 !!  salt [g/kg or n.d.] Ocean salinity
 !!  seawater_visc_3D [kg m-1 s-1] Ocean viscosity
 
-    real(kind=8),dimension(1)             :: A, B, mu_w
-    integer                               :: row, k, nzmin, nzmax
+    integer,      intent(in)                  :: myDim_nod2d
+    integer,      intent(in), target          :: tr_num
+    real(kind=8), intent(in), dimension(:, :) :: tracer_data_values_1, tracer_data_values_2
+    integer,      intent(in), dimension(:)    :: ulevels_nod2D, nlevels_nod2D
 
-    integer       , intent(in)   , target :: tr_num
-    type(t_tracer), intent(inout), target :: tracers
-    type(t_partit), intent(inout), target :: partit
-    type(t_mesh)  , intent(in)   , target :: mesh
+    integer                    :: row, k, nzmin, nzmax
+    real(kind=8), dimension(1) :: A, B, mu_w
 
     seawater_visc_3D(:,:) = 0.0
-    do row=1, partit%myDim_nod2d
+    do row=1, myDim_nod2d
      !if (ulevels_nod2D(row)>1) cycle
 ! OG Do we need any limitation here?
 ! i.e., if (seawater_visc_3D(row)<=0.0_WP) cycle
-        nzmin = mesh%ulevels_nod2D(row)
-        nzmax = mesh%nlevels_nod2D(row)
+        nzmin = ulevels_nod2D(row)
+        nzmax = nlevels_nod2D(row)
 
         do k=nzmin, nzmax
      ! Eq from Sharaway 2010
@@ -902,10 +915,10 @@ subroutine get_seawater_viscosity(tr_num, tracers, partit, mesh)
      !  0<temp<180 degC
      !  0<salt<0.15 kg/kg
      ! Note: because salinity is expected to be in kg/kg, use conversion factor 0.001 below!
-            A(1) = 1.541 + 1.998*0.01*tracers%data(1)%values(k,row) - 9.52*1e-5*tracers%data(1)%values(k,row)*tracers%data(1)%values(k,row)
-            B(1) = 7.974 - 7.561*0.01*tracers%data(1)%values(k,row) + 4.724*1e-4*tracers%data(1)%values(k,row)*tracers%data(1)%values(k,row)
-            mu_w(1) = 4.2844*1.0e-5 + (1.0/(0.157*(tracers%data(1)%values(k,row)+64.993)*(tracers%data(1)%values(k,row)+64.993)-91.296))
-            seawater_visc_3D(k,row) = mu_w(1) * (1.0 + A(1)*tracers%data(2)%values(k,row)*0.001 + B(1)*tracers%data(2)%values(k,row)*0.001*tracers%data(2)%values(k,row)*0.001)
+            A(1) = 1.541 + 1.998*0.01*tracer_data_values_1(k,row) - 9.52*1e-5*tracer_data_values_1(k,row)*tracer_data_values_1(k,row)
+            B(1) = 7.974 - 7.561*0.01*tracer_data_values_1(k,row) + 4.724*1e-4*tracer_data_values_1(k,row)*tracer_data_values_1(k,row)
+            mu_w(1) = 4.2844*1.0e-5 + (1.0/(0.157*(tracer_data_values_1(k,row)+64.993)*(tracer_data_values_1(k,row)+64.993)-91.296))
+            seawater_visc_3D(k,row) = mu_w(1) * (1.0 + A(1)*tracer_data_values_2(k,row)*0.001 + B(1)*tracer_data_values_2(k,row)*0.001*tracer_data_values_2(k,row)*0.001)
         enddo
     end do
 
