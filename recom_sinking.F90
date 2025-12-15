@@ -41,6 +41,23 @@ module ver_sinking_recom_benthos_interface
   end interface
 end module
 
+module get_particle_density_interface
+  interface
+    subroutine get_particle_density(tracers, myDim_nod2d, eDim_nod2D, nl, ulevels_nod2D, nlevels_nod2D)
+
+        use MOD_MESH, only: t_mesh
+        use MOD_PARTIT, only: t_partit
+        use MOD_TRACER, only: t_tracer
+
+        implicit none
+
+        integer,      intent(in)              :: myDim_nod2d, eDim_nod2D, nl
+        integer,      intent(in), dimension(:)    :: ulevels_nod2D, nlevels_nod2D
+        type(t_tracer), intent(inout), target :: tracers
+      end subroutine
+  end interface
+end module
+
 module get_seawater_viscosity_interface
   interface
     subroutine get_seawater_viscosity(tr_num, myDim_nod2d, ulevels_nod2D, nlevels_nod2D, &
@@ -791,7 +808,7 @@ end subroutine ballast
 ! Subroutine calculate density of particle
 ! depending on composition (detC, detOpal, detCaCO3) based on Cram et al. (2018)
 !-------------------------------------------------------------------------------
-subroutine get_particle_density(tracers, partit, mesh)
+subroutine get_particle_density(tracers, myDim_nod2d, eDim_nod2D, nl, ulevels_nod2D, nlevels_nod2D)
 
     use MOD_MESH, only: t_mesh
     use MOD_PARTIT, only: t_partit
@@ -801,21 +818,22 @@ subroutine get_particle_density(tracers, partit, mesh)
     use recom_glovar
 
     implicit none
+
+    integer,      intent(in)              :: myDim_nod2d, eDim_nod2D, nl
+    integer,      intent(in), dimension(:)    :: ulevels_nod2D, nlevels_nod2D
     type(t_tracer), intent(inout), target :: tracers
-    type(t_partit), intent(inout), target :: partit
-    type(t_mesh)  , intent(in)   , target :: mesh
 
     integer                               :: row, k, nzmin, nzmax, tr_num, num_tracers
 
-    real(kind=8)                          :: a1(mesh%nl-1, partit%myDim_nod2D+partit%eDim_nod2D) ! [n.d.] fraction of carbon in detritus class
-    real(kind=8)                          :: a2(mesh%nl-1, partit%myDim_nod2D+partit%eDim_nod2D) ! [n.d.] fraction of nitrogen in detritus class
-    real(kind=8)                          :: a3(mesh%nl-1, partit%myDim_nod2D+partit%eDim_nod2D) ! [n.d.] fraction of Opal in detritus class
-    real(kind=8)                          :: a4(mesh%nl-1, partit%myDim_nod2D+partit%eDim_nod2D) ! [n.d.] fraction of CaCO3 in detritus class
-    real(kind=8)                          :: b1(mesh%nl-1, partit%myDim_nod2D+partit%eDim_nod2D)
-    real(kind=8)                          :: b2(mesh%nl-1, partit%myDim_nod2D+partit%eDim_nod2D)
-    real(kind=8)                          :: b3(mesh%nl-1, partit%myDim_nod2D+partit%eDim_nod2D)
-    real(kind=8)                          :: b4(mesh%nl-1, partit%myDim_nod2D+partit%eDim_nod2D)
-    real(kind=8)                          :: aux(mesh%nl-1, partit%myDim_nod2D+partit%eDim_nod2D)
+    real(kind=8)                          :: a1(nl-1, myDim_nod2D+eDim_nod2D) ! [n.d.] fraction of carbon in detritus class
+    real(kind=8)                          :: a2(nl-1, myDim_nod2D+eDim_nod2D) ! [n.d.] fraction of nitrogen in detritus class
+    real(kind=8)                          :: a3(nl-1, myDim_nod2D+eDim_nod2D) ! [n.d.] fraction of Opal in detritus class
+    real(kind=8)                          :: a4(nl-1, myDim_nod2D+eDim_nod2D) ! [n.d.] fraction of CaCO3 in detritus class
+    real(kind=8)                          :: b1(nl-1, myDim_nod2D+eDim_nod2D)
+    real(kind=8)                          :: b2(nl-1, myDim_nod2D+eDim_nod2D)
+    real(kind=8)                          :: b3(nl-1, myDim_nod2D+eDim_nod2D)
+    real(kind=8)                          :: b4(nl-1, myDim_nod2D+eDim_nod2D)
+    real(kind=8)                          :: aux(nl-1, myDim_nod2D+eDim_nod2D)
 
     num_tracers=tracers%num_tracers
 
@@ -834,9 +852,9 @@ subroutine get_particle_density(tracers, partit, mesh)
         if (tracers%data(tr_num)%ID==1021)  b4 = max(tiny,tracers%data(tr_num)%values(:,:)) !idetcal    ! [mmol m-3] detritus CaCO3
     end do
 
-    do row=1, partit%myDim_nod2d
-        nzmin = mesh%ulevels_nod2D(row)
-        nzmax = mesh%nlevels_nod2D(row)
+    do row=1, myDim_nod2d
+        nzmin = ulevels_nod2D(row)
+        nzmax = nlevels_nod2D(row)
         aux(nzmin:nzmax,row) = b1(nzmin:nzmax,row)+b2(nzmin:nzmax,row)+b3(nzmin:nzmax,row)+b4(nzmin:nzmax,row)
         a1(nzmin:nzmax,row)  = b1(nzmin:nzmax,row)/aux(nzmin:nzmax,row)
         a2(nzmin:nzmax,row)  = b2(nzmin:nzmax,row)/aux(nzmin:nzmax,row)
@@ -859,10 +877,10 @@ subroutine get_particle_density(tracers, partit, mesh)
         if (tracers%data(tr_num)%ID==1028)  b4 = max(tiny,tracers%data(tr_num)%values(:,:)) !idetz2calc
     end do
 
-    do row=1, partit%myDim_nod2d + partit%eDim_nod2D   ! myDim is sufficient
+    do row=1, myDim_nod2d + eDim_nod2D   ! myDim is sufficient
         !if (ulevels_nod2D(row)>1) cycle
-        nzmin = mesh%ulevels_nod2D(row)
-        nzmax = mesh%nlevels_nod2D(row)
+        nzmin = ulevels_nod2D(row)
+        nzmax = nlevels_nod2D(row)
         aux(nzmin:nzmax,row) = b1(nzmin:nzmax,row)+b2(nzmin:nzmax,row)+b3(nzmin:nzmax,row)+b4(nzmin:nzmax,row)
         a1(nzmin:nzmax,row)  = b1(nzmin:nzmax,row)/aux(nzmin:nzmax,row)
         a2(nzmin:nzmax,row)  = b2(nzmin:nzmax,row)/aux(nzmin:nzmax,row)
