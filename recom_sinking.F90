@@ -28,15 +28,19 @@ module ver_sinking_recom_interface
 end module
 module ver_sinking_recom_benthos_interface
   interface
-    subroutine ver_sinking_recom_benthos(tr_num, tracer, partit, mesh)
-        use mod_mesh
-        USE MOD_PARTIT
-        USE MOD_PARSUP
-        use mod_tracer
-        integer       , intent(in)   , target :: tr_num
-        type(t_tracer), intent(inout), target :: tracer
+    subroutine ver_sinking_recom_benthos(tr_num, partit, nl, ulevels_nod2D, nlevels_nod2D,     &
+                                         zbar_3d_n, nod_in_elem2D_num, nod_in_elem2D, nlevels, &
+                                         area, tracer_id, tracer_data_values, myDim_nod2d)
+        USE MOD_PARTIT, only: t_partit
+        use o_PARAM, only: wp
+
+        integer,       intent(in)                 :: tr_num, nl, tracer_id, myDim_nod2D
+        integer,       intent(in), dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
+        integer,       intent(in), dimension(:)   :: nod_in_elem2D_num, nlevels
+        integer,       intent(in), dimension(:,:) :: nod_in_elem2D
+        real(kind=WP), intent(in), dimension(:,:) :: zbar_3d_n, area, tracer_data_values
+
         type(t_partit), intent(inout), target :: partit
-        type(t_mesh)  , intent(in)   , target :: mesh
     end subroutine
   end interface
 end module
@@ -78,11 +82,11 @@ end module
 ! second detritus has a different sinking speed than the first
 ! define recom_det2_tracer_id to make it consistent???
 !===============================================================================
-subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
+subroutine ver_sinking_recom_benthos(tr_num, partit, nl, ulevels_nod2D, nlevels_nod2D, zbar_3d_n, &
+                                     nod_in_elem2D_num, nod_in_elem2D, nlevels, area, tracer_id,  &
+                                     tracer_data_values, myDim_nod2d)
 
-    use MOD_MESH, only: t_mesh
     use MOD_PARTIT, only: t_partit
-    use MOD_TRACER, only: t_tracer
 
     use g_clock, only: dt
     use o_PARAM, only: wp
@@ -97,23 +101,23 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
 
     implicit none
 
-    integer       , intent(in)   , target :: tr_num
-    type(t_tracer), intent(inout), target :: tracers
+    integer,       intent(in)                 :: tr_num, nl, tracer_id, myDim_nod2D
+    integer,       intent(in), dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
+    integer,       intent(in), dimension(:)   :: nod_in_elem2D_num, nlevels
+    integer,       intent(in), dimension(:,:) :: nod_in_elem2D
+    real(kind=WP), intent(in), dimension(:,:) :: zbar_3d_n, area, tracer_data_values
+
     type(t_partit), intent(inout), target :: partit
-    type(t_mesh)  , intent(in)   , target :: mesh
 
     integer                   :: elem,k
     integer                   :: nl1,ul1,nz,n,nzmin, nzmax, net
-    real(kind=WP)             :: Vben(mesh%nl),  aux(mesh%nl-1),  flux(mesh%nl), add_benthos_2d(partit%myDim_nod2D)
+    real(kind=WP)             :: Vben(nl),  aux(nl-1),  flux(nl), add_benthos_2d(myDim_nod2D)
     integer                   :: nlevels_nod2D_minimum
     real(kind=WP)             :: tv
-    real(kind=WP), dimension(:,:), pointer :: trarr
 
-    trarr=>tracers%data(tr_num)%values(:,:)
-
-   do n=1, partit%myDim_nod2D ! needs exchange_nod in the end
-        nl1=mesh%nlevels_nod2D(n)-1
-        ul1=mesh%ulevels_nod2D(n)
+   do n=1, myDim_nod2D ! needs exchange_nod in the end
+        nl1=nlevels_nod2D(n)-1
+        ul1=ulevels_nod2D(n)
 
         aux=0._WP
         Vben=0._WP
@@ -121,52 +125,52 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
 
 ! Calculate sinking velociy for vertical sinking case
 ! ******************************************************
-          if (any(recom_det_tracer_id == tracers%data(tr_num)%ID)) Vben = Vdet
-          if (any(recom_phy_tracer_id == tracers%data(tr_num)%ID)) Vben = VPhy
-          if (any(recom_dia_tracer_id == tracers%data(tr_num)%ID)) Vben = VDia
+          if (any(recom_det_tracer_id == tracer_id)) Vben = Vdet
+          if (any(recom_phy_tracer_id == tracer_id)) Vben = VPhy
+          if (any(recom_dia_tracer_id == tracer_id)) Vben = VDia
         if (allow_var_sinking) then
-          Vben = Vdet_a * abs(mesh%zbar_3d_n(:,n)) + Vben
+          Vben = Vdet_a * abs(zbar_3d_n(:,n)) + Vben
         end if
 
 ! Constant vertical sinking for the second detritus class
 ! *******************************************************
 
     if (enable_3zoo2det) then
-          if(tracers%data(tr_num)%ID==1025 .or. &  !idetz2n
-             tracers%data(tr_num)%ID==1026 .or. &  !idetz2c
-             tracers%data(tr_num)%ID==1027 .or. &  !idetz2si
-             tracers%data(tr_num)%ID==1028 ) then  !idetz2calc
+          if(tracer_id==1025 .or. &  !idetz2n
+             tracer_id==1026 .or. &  !idetz2c
+             tracer_id==1027 .or. &  !idetz2si
+             tracer_id==1028 ) then  !idetz2calc
              Vben = VDet_zoo2
           endif
     endif
 
         Vben= Vben/SecondsPerDay ! conversion [m/d] --> [m/s] (vertical velocity, note that it is positive here)
 
-        k=mesh%nod_in_elem2D_num(n)
+        k=nod_in_elem2D_num(n)
 
         !! * Screening minimum depth in neigbouring nodes around node n*
-        nlevels_nod2D_minimum=minval(mesh%nlevels(mesh%nod_in_elem2D(1:k, n))-1)
+        nlevels_nod2D_minimum=minval(nlevels(nod_in_elem2D(1:k, n))-1)
 
         do nz=nlevels_nod2D_minimum, nl1
-           tv = trarr(nz,n)*Vben(nz)
-           aux(nz)= - tv*(mesh%area(nz,n)-mesh%area(nz+1,n))
+           tv = tracer_data_values(nz,n)*Vben(nz)
+           aux(nz)= - tv*(area(nz,n)-area(nz+1,n))
         end do
 
         do nz=ul1,nl1
-           str_bf(nz,n) = str_bf(nz,n) + (aux(nz))*dt/mesh%area(nz,n)/(mesh%zbar_3d_n(nz,n)-mesh%zbar_3d_n(nz+1,n))
+           str_bf(nz,n) = str_bf(nz,n) + (aux(nz))*dt/area(nz,n)/(zbar_3d_n(nz,n)-zbar_3d_n(nz+1,n))
            add_benthos_2d(n) = add_benthos_2d(n) - (aux(nz))*dt    !!!!!!!!CHECK Maybe /area(nz,n) -> [mmol/m2]
         end do
 
         !! * Particulate Organic Nitrogen *
-        if( tracers%data(tr_num)%ID==1004 .or. &  !iphyn
-            tracers%data(tr_num)%ID==1007 .or. &  !idetn
-            tracers%data(tr_num)%ID==1013 .or. &  !idian
-            tracers%data(tr_num)%ID==1025 ) then  !idetz2n
+        if( tracer_id==1004 .or. &  !iphyn
+            tracer_id==1007 .or. &  !idetn
+            tracer_id==1013 .or. &  !idian
+            tracer_id==1025 ) then  !idetz2n
             Benthos(n,1)= Benthos(n,1) +  add_benthos_2d(n) ![mmol]
 
             if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-               SinkFlx_tr(n,1,tr_num) = SinkFlx_tr(n,1,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt ![mmol/m2]
+               SinkFlx_tr(n,1,tr_num) = SinkFlx_tr(n,1,tr_num) + add_benthos_2d(n) / area(1,n)/dt ![mmol/m2]
         ! now SinkFlx hat the unit mmol/time step 
         ! but mmol/m2/time is needed for MEDUSA: thus /area
             endif
@@ -178,15 +182,15 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
         endif
 
         !! * Particulate Organic Carbon *
-        if( tracers%data(tr_num)%ID==1005 .or. &  !iphyc
-            tracers%data(tr_num)%ID==1008 .or. &  !idetc
-            tracers%data(tr_num)%ID==1014 .or. &  !idiac
-            tracers%data(tr_num)%ID==1026 ) then  !idetz2c
+        if( tracer_id==1005 .or. &  !iphyc
+            tracer_id==1008 .or. &  !idetc
+            tracer_id==1014 .or. &  !idiac
+            tracer_id==1026 ) then  !idetz2c
             Benthos(n,2)= Benthos(n,2) + add_benthos_2d(n)
 
             if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-               SinkFlx_tr(n,2,tr_num) = SinkFlx_tr(n,2,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt
+               SinkFlx_tr(n,2,tr_num) = SinkFlx_tr(n,2,tr_num) + add_benthos_2d(n) / area(1,n)/dt
             endif
             if ((.not.use_MEDUSA).or.(sedflx_num.eq.0)) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
@@ -196,14 +200,14 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
         endif
 
         !! *Particulate Organic Silicon *
-        if( tracers%data(tr_num)%ID==1016 .or. &  !idiasi
-            tracers%data(tr_num)%ID==1017 .or. &  !idetsi
-            tracers%data(tr_num)%ID==1027 ) then  !idetz2si
+        if( tracer_id==1016 .or. &  !idiasi
+            tracer_id==1017 .or. &  !idetsi
+            tracer_id==1027 ) then  !idetz2si
             Benthos(n,3)= Benthos(n,3) + add_benthos_2d(n)
 
             if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-               SinkFlx_tr(n,3,tr_num) = SinkFlx_tr(n,3,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt
+               SinkFlx_tr(n,3,tr_num) = SinkFlx_tr(n,3,tr_num) + add_benthos_2d(n) / area(1,n)/dt
             endif
             if ((.not.use_MEDUSA).or.(sedflx_num.eq.0)) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
@@ -213,14 +217,14 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
         endif
 
         !! * Cal *
-        if( tracers%data(tr_num)%ID==1020 .or. &  !iphycal
-            tracers%data(tr_num)%ID==1021 .or. &  !idetcal
-            tracers%data(tr_num)%ID==1028 ) then  !idetz2cal
+        if( tracer_id==1020 .or. &  !iphycal
+            tracer_id==1021 .or. &  !idetcal
+            tracer_id==1028 ) then  !idetz2cal
             Benthos(n,4)= Benthos(n,4) + add_benthos_2d(n)
 
             if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-               SinkFlx_tr(n,4,tr_num) = SinkFlx_tr(n,4,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt
+               SinkFlx_tr(n,4,tr_num) = SinkFlx_tr(n,4,tr_num) + add_benthos_2d(n) / area(1,n)/dt
             endif
             if ((.not.use_MEDUSA).or.(sedflx_num.eq.0)) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
@@ -231,13 +235,13 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
 
         ! flux of 13C into the sediment
         if (ciso) then             
-            if( tracers%data(tr_num)%ID==1305 .or. & !iphyc_13
-                tracers%data(tr_num)%ID==1308 .or. & !idetc_13
-                tracers%data(tr_num)%ID==1314 ) then !idiac_14
+            if( tracer_id==1305 .or. & !iphyc_13
+                tracer_id==1308 .or. & !idetc_13
+                tracer_id==1314 ) then !idiac_14
 
                 if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-                   SinkFlx_tr(n,5,tr_num) = SinkFlx_tr(n,5,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt
+                   SinkFlx_tr(n,5,tr_num) = SinkFlx_tr(n,5,tr_num) + add_benthos_2d(n) / area(1,n)/dt
                 endif
                 if ((.not.use_MEDUSA).or.(sedflx_num.eq.0)) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
@@ -246,12 +250,12 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
 
             endif
 
-           if( tracers%data(tr_num)%ID==1320 .or. &  !iphycal
-               tracers%data(tr_num)%ID==1321 ) then  !idetcal
+           if( tracer_id==1320 .or. &  !iphycal
+               tracer_id==1321 ) then  !idetcal
 
                if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-                  SinkFlx_tr(n,6,tr_num) = SinkFlx_tr(n,6,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt
+                  SinkFlx_tr(n,6,tr_num) = SinkFlx_tr(n,6,tr_num) + add_benthos_2d(n) / area(1,n)/dt
                endif
                if ((.not.use_MEDUSA).or.(sedflx_num.eq.0)) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
@@ -264,13 +268,13 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
         
         ! flux of 14C into the sediment
         if (ciso .and. ciso_organic_14) then             
-           if( tracers%data(tr_num)%ID==1405 .or. & !iphyc_13
-               tracers%data(tr_num)%ID==1408 .or. & !idetc_13
-               tracers%data(tr_num)%ID==1414 ) then !idiac_14
+           if( tracer_id==1405 .or. & !iphyc_13
+               tracer_id==1408 .or. & !idetc_13
+               tracer_id==1414 ) then !idiac_14
 
                if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-                  SinkFlx_tr(n,7,tr_num) = SinkFlx_tr(n,7,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt
+                  SinkFlx_tr(n,7,tr_num) = SinkFlx_tr(n,7,tr_num) + add_benthos_2d(n) / area(1,n)/dt
                endif
                if ((.not.use_MEDUSA).or.(sedflx_num.eq.0)) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
@@ -279,11 +283,11 @@ subroutine ver_sinking_recom_benthos(tr_num, tracers, partit, mesh)
 
            endif
 
-           if( tracers%data(tr_num)%ID==1420 .or. &  !iphycal
-               tracers%data(tr_num)%ID==1421 ) then  !idetcal
+           if( tracer_id==1420 .or. &  !iphycal
+               tracer_id==1421 ) then  !idetcal
                if (use_MEDUSA) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-                  SinkFlx_tr(n,8,tr_num) = SinkFlx_tr(n,8,tr_num) + add_benthos_2d(n) / mesh%area(1,n)/dt
+                  SinkFlx_tr(n,8,tr_num) = SinkFlx_tr(n,8,tr_num) + add_benthos_2d(n) / area(1,n)/dt
                endif
                if ((.not.use_MEDUSA).or.(sedflx_num.eq.0)) then
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
