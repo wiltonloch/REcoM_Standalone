@@ -45,6 +45,23 @@ module ver_sinking_recom_benthos_interface
   end interface
 end module
 
+module ballast_interface
+  interface
+    subroutine ballast(myDim_nod2d, ulevels_nod2D, nlevels_nod2D, &
+                         geo_coord_nod2D, Z_3d_n, tracer_data_values_1, tracer_data_values_2)
+
+      use o_PARAM, only: wp
+
+      implicit none
+
+      integer,       intent(in)                  :: myDim_nod2D
+      integer,       intent(in), dimension(:)    :: ulevels_nod2D, nlevels_nod2D 
+      real(kind=WP), intent(in), dimension(:, :) :: geo_coord_nod2D, Z_3d_n
+      real(kind=WP), intent(in), dimension(:, :) :: tracer_data_values_1, tracer_data_values_2
+    end subroutine
+  end interface
+end module
+
 module get_particle_density_interface
   interface
     subroutine get_particle_density(tracers, myDim_nod2d, eDim_nod2D, nl, ulevels_nod2D, nlevels_nod2D)
@@ -707,11 +724,8 @@ end subroutine ver_sinking_recom
 !-------------------------------------------------------------------------------
 ! Subroutine calculate ballasting
 !-------------------------------------------------------------------------------
-subroutine ballast(tr_num, tracers, partit, mesh)
-
-    use MOD_MESH, only: t_mesh
-    use MOD_PARTIT, only: t_partit
-    use MOD_TRACER, only: t_tracer
+subroutine ballast(myDim_nod2D, ulevels_nod2D, nlevels_nod2D, &
+                   geo_coord_nod2D, Z_3d_n, tracer_data_values_1, tracer_data_values_2)
 
     use recom_config
     use recom_glovar
@@ -721,10 +735,12 @@ subroutine ballast(tr_num, tracers, partit, mesh)
     use gsw_mod_toolbox, only: gsw_sa_from_sp, gsw_ct_from_pt,gsw_rho
 
     implicit none
-    integer       , intent(in)   , target :: tr_num
-    type(t_tracer), intent(inout), target :: tracers
-    type(t_partit), intent(inout), target :: partit
-    type(t_mesh)  , intent(in)   , target :: mesh
+
+    integer,       intent(in)                  :: myDim_nod2D
+    integer,       intent(in), dimension(:)    :: ulevels_nod2D, nlevels_nod2D 
+    real(kind=WP), intent(in), dimension(:, :) :: geo_coord_nod2D, Z_3d_n
+    real(kind=WP), intent(in), dimension(:, :) :: tracer_data_values_1, tracer_data_values_2
+
     integer                               :: row, k, nzmin, nzmax
     real(kind=8)                          :: depth_pos(1)
     real(kind=8)                          :: pres(1)
@@ -745,25 +761,25 @@ subroutine ballast(tr_num, tracers, partit, mesh)
 !     call get_particle_density(mesh) ! rho_particle = density of particle class 1 and 2
      !___________________________________________________________________________
      ! loop over local nodes
-     do row=1, partit%myDim_nod2D
+     do row=1, myDim_nod2D
          ! max. number of levels at node n
-        nzmin = mesh%ulevels_nod2D(row)
-        nzmax = mesh%nlevels_nod2D(row)
+        nzmin = ulevels_nod2D(row)
+        nzmax = nlevels_nod2D(row)
          !! lon
-        Lon_degree(1)=mesh%geo_coord_nod2D(1,row)/rad !! convert from rad to degree
+        Lon_degree(1)=geo_coord_nod2D(1,row)/rad !! convert from rad to degree
          !! lat
-        Lat_degree(1)=mesh%geo_coord_nod2D(2,row)/rad !! convert from rad to degree
+        Lat_degree(1)=geo_coord_nod2D(2,row)/rad !! convert from rad to degree
 
         ! get scaling vectors -> these need to be passed to FESOM to get sinking velocities
         ! get local seawater density
         do k=nzmin, nzmax
 
            !! level depth
-           depth_pos(1) = abs(mesh%Z_3d_n(k,row))  ! take depth of tracers instead of levels abs(zbar_3d_n(k,row))
+           depth_pos(1) = abs(Z_3d_n(k,row))  ! take depth of tracers instead of levels abs(zbar_3d_n(k,row))
 
            call depth2press(depth_pos(1), Lat_degree(1), pres, 1)  ! pres is output of function,1=number of records
-           sa           = gsw_sa_from_sp(tracers%data(2)%values(k,row), pres, Lon_degree(1), Lat_degree(1))
-           ct           = gsw_ct_from_pt(sa,tracers%data(1)%values(k,row))
+           sa           = gsw_sa_from_sp(tracer_data_values_2(k,row), pres, Lon_degree(1), Lat_degree(1))
+           ct           = gsw_ct_from_pt(sa,tracer_data_values_1(k,row))
            rho_seawater = gsw_rho(sa, ct, pres)
 
            ! (i.e. no density scaling)
