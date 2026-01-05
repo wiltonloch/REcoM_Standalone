@@ -12,20 +12,24 @@ module diff_ver_recom_expl_interface
     end subroutine
   end interface
 end module
+
 module ver_sinking_recom_interface
   interface
-    subroutine ver_sinking_recom(tr_num, tracer, partit, mesh)
-        use mod_mesh
-        USE MOD_PARTIT
-        USE MOD_PARSUP
-        use mod_tracer
-        integer       , intent(in)   , target :: tr_num
-        type(t_tracer), intent(inout), target :: tracer
-        type(t_partit), intent(inout), target :: partit
-        type(t_mesh)  , intent(in)   , target :: mesh
+        subroutine ver_sinking_recom(tr_num, nl, ulevels_nod2D, nlevels_nod2D, zbar_3d_n, z_3d_n, &
+                                     nod_in_elem2D_num, nod_in_elem2D, nlevels, area, areasvol,   &
+                                     hnode, hnode_new, tracer_id, tracer_data_values, myDim_nod2d)
+        use o_param, only: wp
+        integer,       intent(in)                 :: tr_num, myDim_nod2d
+        integer,       intent(in)                 :: nl, tracer_id
+        integer,       intent(in), dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
+        integer,       intent(in), dimension(:)   :: nod_in_elem2D_num, nlevels
+        integer,       intent(in), dimension(:,:) :: nod_in_elem2D
+        real(kind=WP), intent(in), dimension(:,:) :: zbar_3d_n, z_3d_n, area, areasvol, hnode, hnode_new
+        real(kind=WP), intent(in), dimension(:,:) :: tracer_data_values
     end subroutine
   end interface
 end module
+
 module ver_sinking_recom_benthos_interface
   interface
     subroutine ver_sinking_recom_benthos(tr_num, partit, nl, ulevels_nod2D, nlevels_nod2D,     &
@@ -470,12 +474,11 @@ endif ! (use_MEDUSA .and. (sedflux_num .gt. 0))
     end do
 end subroutine diff_ver_recom_expl
 
-subroutine ver_sinking_recom(tr_num, tracers, partit, mesh)
+subroutine ver_sinking_recom(tr_num, nl, ulevels_nod2D, nlevels_nod2D, zbar_3d_n, z_3d_n, &
+                             nod_in_elem2D_num, nod_in_elem2D, nlevels, area, areasvol,   &
+                             hnode, hnode_new, tracer_id, tracer_data_values, myDim_nod2d)
 ! Sinking in water column
 
-    use MOD_MESH, only: t_mesh
-    use MOD_PARTIT, only: t_partit
-    use MOD_TRACER, only: t_tracer
     use g_clock, only: dt
     use o_param, only: wp
     use o_arrays, only: vert_sink
@@ -488,26 +491,25 @@ subroutine ver_sinking_recom(tr_num, tracers, partit, mesh)
 
     implicit none
 
-    integer       , intent(in)   , target  :: tr_num
-    type(t_tracer), intent(inout), target  :: tracers
-    type(t_partit), intent(inout), target  :: partit
-    type(t_mesh)  , intent(in)   , target  :: mesh
+    integer,       intent(in)                 :: tr_num, myDim_nod2D
+    integer,       intent(in)                 :: nl, tracer_id
+    integer,       intent(in), dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
+    integer,       intent(in), dimension(:)   :: nod_in_elem2D_num, nlevels
+    integer,       intent(in), dimension(:,:) :: nod_in_elem2D
+    real(kind=WP), intent(in), dimension(:,:) :: zbar_3d_n, z_3d_n, area, areasvol, hnode, hnode_new
+    real(kind=WP), intent(in), dimension(:,:) :: tracer_data_values
 
-    integer                                :: node, nz,  id, nzmin, nzmax, n, k, nlevels_nod2D_minimum
-    real(kind=WP)                          :: vd_flux(mesh%nl)
-    real(kind=8)                           :: dz_trr(mesh%nl), aux
-    real(kind=8)                           :: wLoc,wM,wPs
-    real(kind=8)                           :: Rjp,Rj,Rjm
+    integer                     :: node, nz,  id, nzmin, nzmax, n, k, nlevels_nod2D_minimum
+    real(kind=8)                :: wLoc, wM, wPs, aux
+    real(kind=8)                :: Rjp,Rj,Rjm
 
-    real(kind=8)                           :: cfl, d0, d1, thetaP, thetaM, psiP, psiM
-    real(kind=8)                           :: onesixth = 1.d0/6.d0
-    real(kind=8)                           :: dt_sink, c1, c2
-    real(kind=8)                           :: Vsink, tv
-    real(kind=8),dimension(mesh%nl)        :: Wvel_flux
+    real(kind=8)                :: cfl, d0, d1, thetaP, thetaM, psiP, psiM
+    real(kind=8)                :: onesixth = 1.d0/6.d0
+    real(kind=8)                :: dt_sink, c1, c2
+    real(kind=8)                :: Vsink, tv
 
-    real(kind=WP), dimension(:,:), pointer :: trarr
+    real(kind=8), dimension(nl) :: Wvel_flux, vd_flux, dz_trr
 
-    trarr=>tracers%data(tr_num)%values(:,:)
 
 !< calculate scaling factors
 !< scaling_density1_3D, scaling_density2_3D
@@ -524,42 +526,42 @@ subroutine ver_sinking_recom(tr_num, tracers, partit, mesh)
 !< Groups tracers by functional type and assigns corresponding velocity
 
 ! Detritus tracers (nitrogen, carbon, silicate, calcite)
-    if (tracers%data(tr_num)%ID == 1007 .or.    &  ! idetn
-        tracers%data(tr_num)%ID == 1008 .or.    &  ! idetc
-        tracers%data(tr_num)%ID == 1017 .or.    &  ! idetsi
-        tracers%data(tr_num)%ID == 1021) then   ! idetcal
+    if (tracer_id == 1007 .or.    &  ! idetn
+        tracer_id == 1008 .or.    &  ! idetc
+        tracer_id == 1017 .or.    &  ! idetsi
+        tracer_id == 1021) then   ! idetcal
             Vsink = VDet
 
 ! Phytoplankton tracers (nitrogen, carbon, chlorophyll)
-    elseif (tracers%data(tr_num)%ID == 1004 .or. &  ! iphyn
-        tracers%data(tr_num)%ID == 1005 .or.     &  ! iphyc
-        tracers%data(tr_num)%ID == 1006) then     ! ipchl
+    elseif (tracer_id == 1004 .or. &  ! iphyn
+        tracer_id == 1005 .or.     &  ! iphyc
+        tracer_id == 1006) then     ! ipchl
             Vsink = VPhy
 
 ! Diatom tracers (nitrogen, carbon, silicate, chlorophyll)
-    elseif (tracers%data(tr_num)%ID == 1013 .or. &  ! idian
-        tracers%data(tr_num)%ID == 1014 .or.     &  ! idiac
-        tracers%data(tr_num)%ID == 1016 .or.     &  ! idiasi
-        tracers%data(tr_num)%ID == 1015) then       ! idchl
+    elseif (tracer_id == 1013 .or. &  ! idian
+        tracer_id == 1014 .or.     &  ! idiac
+        tracer_id == 1016 .or.     &  ! idiasi
+        tracer_id == 1015) then       ! idchl
             Vsink = VDia
 
 ! Coccolithophore tracers (nitrogen, carbon, chlorophyll)
     elseif (enable_coccos .and. &
-        (tracers%data(tr_num)%ID == 1029 .or. &     ! icocn
-        tracers%data(tr_num)%ID == 1030 .or.    &   ! icocc
-        tracers%data(tr_num)%ID == 1031)) then      ! icchl
+        (tracer_id == 1029 .or. &     ! icocn
+        tracer_id == 1030 .or.    &   ! icocc
+        tracer_id == 1031)) then      ! icchl
             Vsink = VCocco
 
 ! Phaeocystis tracers (nitrogen, carbon, chlorophyll)
      elseif (enable_coccos .and. &
-        (tracers%data(tr_num)%ID == 1032 .or. &  ! iphan
-         tracers%data(tr_num)%ID == 1033 .or. &  ! iphac
-         tracers%data(tr_num)%ID == 1034)) then  ! iphachl
+        (tracer_id == 1032 .or. &  ! iphan
+         tracer_id == 1033 .or. &  ! iphac
+         tracer_id == 1034)) then  ! iphachl
             Vsink = VPhaeo
 
 
 ! Phytoplankton calcite tracer (special case)
-    elseif (tracers%data(tr_num)%ID == 1020) then   ! iphycal
+    elseif (tracer_id == 1020) then   ! iphycal
     if (enable_coccos) then
         Vsink = VCocco
     else
@@ -568,10 +570,10 @@ subroutine ver_sinking_recom(tr_num, tracers, partit, mesh)
 
 ! Zooplankton-2 detritus tracers (nitrogen, carbon, silicate, calcite)
     elseif (enable_3zoo2det .and. &
-        (tracers%data(tr_num)%ID == 1025 .or. &  ! idetz2n
-         tracers%data(tr_num)%ID == 1026 .or. &  ! idetz2c
-         tracers%data(tr_num)%ID == 1027 .or. &  ! idetz2si
-         tracers%data(tr_num)%ID == 1028)) then  ! idetz2calc
+        (tracer_id == 1025 .or. &  ! idetz2n
+         tracer_id == 1026 .or. &  ! idetz2c
+         tracer_id == 1027 .or. &  ! idetz2si
+         tracer_id == 1028)) then  ! idetz2calc
         Vsink = VDet_zoo2
 
     end if
@@ -580,17 +582,17 @@ subroutine ver_sinking_recom(tr_num, tracers, partit, mesh)
 !! ---- No sinking if Vsink < 0.1 m/day
 if (Vsink .gt. 0.1) then
 
-   do n = 1, partit%myDim_nod2D
-      if (mesh%ulevels_nod2D(n)>1) cycle
-      nzmin = mesh%ulevels_nod2D(n)
-      nzmax = mesh%nlevels_nod2D(n)-1
+   do n = 1, myDim_nod2D
+      if (ulevels_nod2D(n)>1) cycle
+      nzmin = ulevels_nod2D(n)
+      nzmax = nlevels_nod2D(n)-1
 
       !! distance between tracer points, surface and bottom dz_trr is half
       !! the layer thickness
       dz_trr                = 0.0d0
-      dz_trr(nzmin+1:nzmax) = abs(mesh%Z_3d_n(nzmin:nzmax-1,n)-mesh%Z_3d_n(nzmin+1:nzmax,n))
-      dz_trr(nzmin)         = mesh%hnode(nzmin,n)/2.0d0
-      dz_trr(nzmax+1)       = mesh%hnode(nzmax,n)/2.0d0
+      dz_trr(nzmin+1:nzmax) = abs(Z_3d_n(nzmin:nzmax-1,n)-Z_3d_n(nzmin+1:nzmax,n))
+      dz_trr(nzmin)         = hnode(nzmin,n)/2.0d0
+      dz_trr(nzmax+1)       = hnode(nzmax,n)/2.0d0
 
       Wvel_flux(nzmin:nzmax+1)= 0.d0  ! Vertical velocity for BCG tracers
 
@@ -599,18 +601,18 @@ if (Vsink .gt. 0.1) then
          Wvel_flux(nz) = -Vsink/SecondsPerDay ! allow_var_sinking = .false.
 
          if (allow_var_sinking) then
-            Wvel_flux(nz) = -((Vdet_a * abs(mesh%zbar_3d_n(nz,n))/SecondsPerDay) + Vsink/SecondsPerDay)
+            Wvel_flux(nz) = -((Vdet_a * abs(zbar_3d_n(nz,n))/SecondsPerDay) + Vsink/SecondsPerDay)
             if (use_ballasting) then
 ! Apply ballasting on slow sinking detritus
 !if (any(recom_sinking_tracer_id == tracer_id(tr_num))) then
 
-                if (tracers%data(tr_num)%ID ==1007 .or.    &  !idetn
-                    tracers%data(tr_num)%ID ==1008 .or.    &  !idetc
-                    tracers%data(tr_num)%ID ==1017 .or.    &  !idetsi
-                    tracers%data(tr_num)%ID ==1021 ) then     !idetcal
+                if (tracer_id ==1007 .or.    &  !idetn
+                    tracer_id ==1008 .or.    &  !idetc
+                    tracer_id ==1017 .or.    &  !idetsi
+                    tracer_id ==1021 ) then     !idetcal
                 Wvel_flux(nz) = w_ref1 * scaling_density1_3D(nz,n) * scaling_visc_3D(nz,n)
 
-                if (depth_scaling1.gt.0.0) Wvel_flux(nz) = Wvel_flux(nz) + (depth_scaling1 * abs(mesh%zbar_3d_n(nz,n)))
+                if (depth_scaling1.gt.0.0) Wvel_flux(nz) = Wvel_flux(nz) + (depth_scaling1 * abs(zbar_3d_n(nz,n)))
 
                 if (abs(Wvel_flux(nz)) .gt. max_sinking_velocity) Wvel_flux(nz) = max_sinking_velocity
 
@@ -622,17 +624,17 @@ if (Vsink .gt. 0.1) then
 
          !! ---- We assume constant sinking for second detritus
          if(enable_3zoo2det .and. &
-            tracers%data(tr_num)%ID ==1025 .or. &  !idetz2n
-            tracers%data(tr_num)%ID ==1026 .or. &  !idetz2c
-            tracers%data(tr_num)%ID ==1027 .or. &  !idetz2si
-            tracers%data(tr_num)%ID ==1028 ) then  !idetz2calc
+            tracer_id ==1025 .or. &  !idetz2n
+            tracer_id ==1026 .or. &  !idetz2c
+            tracer_id ==1027 .or. &  !idetz2si
+            tracer_id ==1028 ) then  !idetz2calc
                Wvel_flux(nz) = -VDet_zoo2/SecondsPerDay
 
                if (use_ballasting) then
 
                   Wvel_flux(nz) = w_ref2*scaling_density2_3D(nz,n)*scaling_visc_3D(nz,n)
 
-                  if (depth_scaling2.gt.0.0) Wvel_flux(nz) = Wvel_flux(nz) + (depth_scaling2 * abs(mesh%zbar_3d_n(nz,n)))
+                  if (depth_scaling2.gt.0.0) Wvel_flux(nz) = Wvel_flux(nz) + (depth_scaling2 * abs(zbar_3d_n(nz,n)))
 
                   if (abs(Wvel_flux(nz)) .gt. max_sinking_velocity) Wvel_flux(nz) = max_sinking_velocity
 
@@ -642,9 +644,9 @@ if (Vsink .gt. 0.1) then
 
          endif
 
-         if (tracers%data(tr_num)%ID == 1021) Sinkvel1_tr(nz,n,tr_num) = Wvel_flux(nz) !-1.0d0/SecondsPerDay  !idetcal
+         if (tracer_id == 1021) Sinkvel1_tr(nz,n,tr_num) = Wvel_flux(nz) !-1.0d0/SecondsPerDay  !idetcal
          if (enable_3zoo2det .and. &
-             tracers%data(tr_num)%ID == 1028) Sinkvel2_tr(nz,n,tr_num) = Wvel_flux(nz)  !idetz2calc
+             tracer_id == 1028) Sinkvel2_tr(nz,n,tr_num) = Wvel_flux(nz)  !idetz2calc
 
 
       end do
@@ -655,17 +657,17 @@ if (Vsink .gt. 0.1) then
 !FIXME: Having IF True and IF False is bad practice. Either throw away the old code, or make a namelist switch...
 if (.TRUE.) then ! 3rd Order DST Sceheme with flux limiting. This code comes from old recom
 
-      k= mesh%nod_in_elem2D_num(n)
+      k= nod_in_elem2D_num(n)
       ! Screening minimum depth in neigbouring nodes around node n
-      nlevels_nod2D_minimum=minval(mesh%nlevels(mesh%nod_in_elem2D(1:k, n))-1)
+      nlevels_nod2D_minimum=minval(nlevels(nod_in_elem2D(1:k, n))-1)
 
       vd_flux(nzmin:nzmax+1)= 0.0_WP
 
       do nz=nzmax, nzmin+1,-1
 
-         Rjp = trarr(nz,n)              - trarr(min(nz+1,nzmax),n)
-         Rj  = trarr(max(nzmin,nz-1),n) - trarr(nz,n)
-         Rjm = trarr(max(nzmin,nz-2),n) - trarr(max(nzmin,nz-1),n)
+         Rjp = tracer_data_values(nz,n)              - tracer_data_values(min(nz+1,nzmax),n)
+         Rj  = tracer_data_values(max(nzmin,nz-1),n) - tracer_data_values(nz,n)
+         Rjm = tracer_data_values(max(nzmin,nz-2),n) - tracer_data_values(max(nzmin,nz-1),n)
 
          cfl = abs(Wvel_flux(nz) * dt_sink / dz_trr(nz)) !(Z_n(nz-1)-Z_n(nz)))       ! [m/day] * [day] * [1/m]  ! NEW BALL changed dt to dt_sink
 
@@ -685,9 +687,9 @@ if (.TRUE.) then ! 3rd Order DST Sceheme with flux limiting. This code comes fro
          psiM = max(0.d0, min(min(1.d0,psiM), &
             (1.d0-cfl)/(1.d-20-cfl)*thetaM))
 
-         tv= (0.5 * wPs * (trarr(nz,n)              + psiM * Rj)+ &
-              0.5 * wM  * (trarr(max(nzmin,nz-1),n) + psiP * Rj))
-         vd_flux(nz)= - tv* mesh%area(nz,n)
+         tv= (0.5 * wPs * (tracer_data_values(nz,n)              + psiM * Rj)+ &
+              0.5 * wM  * (tracer_data_values(max(nzmin,nz-1),n) + psiP * Rj))
+         vd_flux(nz)= - tv* area(nz,n)
       end do
 end if ! 3rd Order DST Sceheme with flux limiting
 
@@ -699,23 +701,23 @@ if (.FALSE.) then ! simple upwind
       ! Bottom flux
       vd_flux(nzmax+1)= 0.0_WP
 
-      k= mesh%nod_in_elem2D_num(n)
+      k= nod_in_elem2D_num(n)
       ! Screening minimum depth in neigbouring nodes around node n
-      nlevels_nod2D_minimum=minval(mesh%nlevels(mesh%nod_in_elem2D(1:k, n))-1)
+      nlevels_nod2D_minimum=minval(nlevels(nod_in_elem2D(1:k, n))-1)
 
       do nz=nzmin+1,nzmax !nlevels_nod2D_minimum-1
 !         tv = trarr(nz,n)                                ! simple scheme       - test1
 !         tv = 0.5_WP*(trarr(nz-1,n)+trarr(nz,n))         ! consider both layers - test2
 !         tv = tv*Wvel_flux(nz) ! Wvel_flux is negative
          tv = - 0.5* & ! - test3
-            (trarr(nz-1,n)*(Wvel_flux(nz)-abs(Wvel_flux(nz))) + &
-             trarr(nz  ,n)*(Wvel_flux(nz)+abs(Wvel_flux(nz))))
-         vd_flux(nz)= tv* mesh%area(nz,n)
+            (tracer_data_values(nz-1,n)*(Wvel_flux(nz)-abs(Wvel_flux(nz))) + &
+             tracer_data_values(nz  ,n)*(Wvel_flux(nz)+abs(Wvel_flux(nz))))
+         vd_flux(nz)= tv* area(nz,n)
 
       end do
 end if ! simple upwind
       do nz=nzmin,nzmax
-         vert_sink(nz,n) = vert_sink(nz,n) + (vd_flux(nz)-vd_flux(nz+1))*dt/mesh%areasvol(nz,n)/ mesh%hnode_new(nz,n) !/(zbar_3d_n(nz,n)-zbar_3d_n(nz+1,n))
+         vert_sink(nz,n) = vert_sink(nz,n) + (vd_flux(nz)-vd_flux(nz+1))*dt/areasvol(nz,n)/ hnode_new(nz,n) !/(zbar_3d_n(nz,n)-zbar_3d_n(nz+1,n))
       end do
    end do
 end if ! Vsink .gt. 0.1
