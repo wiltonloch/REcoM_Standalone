@@ -410,7 +410,8 @@ if (use_MEDUSA .and. (sedflx_num .ne. 0)) then
         write(*,*) 'check specified in boundary conditions'
         write(*,*) 'the model will stop!'
       end if
-      call par_ex(partit%MPI_COMM_FESOM, partit%mype)
+      ! This can be improved later on
+      call MPI_ABORT(partit%MPI_COMM_FESOM, 1)
       stop
   END SELECT
 else
@@ -440,7 +441,8 @@ else
              write(*,*) 'check specified in boundary conditions'
              write(*,*) 'the model will stop!'
           end if
-          call par_ex(partit%MPI_COMM_FESOM, partit%mype)
+          ! This can be improved later on
+          call MPI_ABORT(partit%MPI_COMM_FESOM, 1)
           stop
     END SELECT
 endif ! (use_MEDUSA .and. (sedflux_num .gt. 0))  
