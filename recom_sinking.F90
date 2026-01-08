@@ -34,17 +34,18 @@ end module
 
 module ver_sinking_recom_benthos_interface
   interface
-    subroutine ver_sinking_recom_benthos(tr_num, partit, nl, ulevels_nod2D, nlevels_nod2D,     &
-                                         zbar_3d_n, nod_in_elem2D_num, nod_in_elem2D, nlevels, &
-                                         area, tracer_id, tracer_data_values, myDim_nod2d)
+    subroutine ver_sinking_recom_benthos(tr_num, partit, nl, ulevels_nod2D, nlevels_nod2D,         &
+                                         zbar_3d_n, nod_in_elem2D_num, nod_in_elem2D, nlevels,     &
+                                         area, tracer_id, tracer_data_values, myDim_nod2d, str_bf)
         USE MOD_PARTIT, only: t_partit
         use o_PARAM, only: wp
 
-        integer,       intent(in)                 :: tr_num, nl, tracer_id, myDim_nod2D
-        integer,       intent(in), dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
-        integer,       intent(in), dimension(:)   :: nod_in_elem2D_num, nlevels
-        integer,       intent(in), dimension(:,:) :: nod_in_elem2D
-        real(kind=WP), intent(in), dimension(:,:) :: zbar_3d_n, area, tracer_data_values
+        integer,       intent(in)                    :: tr_num, nl, tracer_id, myDim_nod2D
+        integer,       intent(in),    dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
+        integer,       intent(in),    dimension(:)   :: nod_in_elem2D_num, nlevels
+        integer,       intent(in),    dimension(:,:) :: nod_in_elem2D
+        real(kind=WP), intent(in),    dimension(:,:) :: zbar_3d_n, area, tracer_data_values
+        real(kind=WP), intent(inout), dimension(:,:) :: str_bf
 
         type(t_partit), intent(inout), target :: partit
     end subroutine
@@ -107,13 +108,12 @@ end module
 !===============================================================================
 subroutine ver_sinking_recom_benthos(tr_num, partit, nl, ulevels_nod2D, nlevels_nod2D, zbar_3d_n, &
                                      nod_in_elem2D_num, nod_in_elem2D, nlevels, area, tracer_id,  &
-                                     tracer_data_values, myDim_nod2d)
+                                     tracer_data_values, myDim_nod2d, str_bf)
 
     use MOD_PARTIT, only: t_partit
 
     use g_clock, only: dt
     use o_PARAM, only: wp
-    use o_arrays, only: str_bf
     use g_comm_auto, only: exchange_nod
 
     use recom_declarations
@@ -124,11 +124,12 @@ subroutine ver_sinking_recom_benthos(tr_num, partit, nl, ulevels_nod2D, nlevels_
 
     implicit none
 
-    integer,       intent(in)                 :: tr_num, nl, tracer_id, myDim_nod2D
-    integer,       intent(in), dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
-    integer,       intent(in), dimension(:)   :: nod_in_elem2D_num, nlevels
-    integer,       intent(in), dimension(:,:) :: nod_in_elem2D
-    real(kind=WP), intent(in), dimension(:,:) :: zbar_3d_n, area, tracer_data_values
+    integer,       intent(in)                    :: tr_num, nl, tracer_id, myDim_nod2D
+    integer,       intent(in),    dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
+    integer,       intent(in),    dimension(:)   :: nod_in_elem2D_num, nlevels
+    integer,       intent(in),    dimension(:,:) :: nod_in_elem2D
+    real(kind=WP), intent(in),    dimension(:,:) :: zbar_3d_n, area, tracer_data_values
+    real(kind=WP), intent(inout), dimension(:,:) :: str_bf
 
     type(t_partit), intent(inout), target :: partit
 
