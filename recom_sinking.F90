@@ -1,14 +1,16 @@
 module diff_ver_recom_expl_interface
   interface
-    subroutine diff_ver_recom_expl(tr_num, tracer, partit, mesh) 
-        use mod_mesh
-        USE MOD_PARTIT
-        USE MOD_PARSUP
-        use mod_tracer
-        integer       , intent(in)   , target :: tr_num
-        type(t_tracer), intent(inout), target :: tracer
-        type(t_partit), intent(inout), target :: partit
-        type(t_mesh)  , intent(in)   , target :: mesh
+subroutine diff_ver_recom_expl(nl, ulevels_nod2D, nlevels_nod2D, nod_in_elem2D_num, nod_in_elem2D, &
+                               nlevels, area, areasvol, hnode_new, tracer_id, myDim_nod2d,         &
+                               eDim_nod2D, mype, MPI_COMM_FESOM, dtr_bf)
+        use o_param, only: wp
+        integer,       intent(in)                    :: myDim_nod2d, eDim_nod2D, mype, MPI_COMM_FESOM
+        integer,       intent(in)                    :: nl, tracer_id
+        integer,       intent(in),    dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
+        integer,       intent(in),    dimension(:)   :: nod_in_elem2D_num, nlevels
+        integer,       intent(in),    dimension(:,:) :: nod_in_elem2D
+        real(kind=WP), intent(in),    dimension(:,:) :: area, areasvol, hnode_new
+        real(kind=WP), intent(inout), dimension(:,:) :: dtr_bf
     end subroutine
   end interface
 end module
@@ -339,16 +341,15 @@ end subroutine ver_sinking_recom_benthos
 !
 !
 !===============================================================================
-subroutine diff_ver_recom_expl(tr_num, tracers, partit, mesh)
+subroutine diff_ver_recom_expl(nl, ulevels_nod2D, nlevels_nod2D, nod_in_elem2D_num, nod_in_elem2D, &
+                               nlevels, area, areasvol, hnode_new, tracer_id, myDim_nod2d,         &
+                               eDim_nod2D, mype, MPI_COMM_FESOM, dtr_bf)
+
 ! Remineralization from benthos
 ! bottom_flux
 
-    use MOD_MESH, only: t_mesh
-    use MOD_PARTIT, only: t_partit
-    use MOD_TRACER, only: t_tracer
     use g_clock, only: dt
     use o_PARAM, only: wp
-    use o_arrays, only: dtr_bf
 
     use recom_declarations
     use recom_locvar
@@ -358,24 +359,23 @@ subroutine diff_ver_recom_expl(tr_num, tracers, partit, mesh)
 
     IMPLICIT NONE
 
-    integer       , intent(in)   , target  :: tr_num
-    type(t_tracer), intent(inout), target  :: tracers
-    type(t_partit), intent(inout), target  :: partit
-    type(t_mesh)  , intent(in)   , target  :: mesh
+    integer,       intent(in)                    :: myDim_nod2d, eDim_nod2D, mype, MPI_COMM_FESOM
+    integer,       intent(in)                    :: nl, tracer_id
+    integer,       intent(in),    dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
+    integer,       intent(in),    dimension(:)   :: nod_in_elem2D_num, nlevels
+    integer,       intent(in),    dimension(:,:) :: nod_in_elem2D
+    real(kind=WP), intent(in),    dimension(:,:) :: area, areasvol, hnode_new
+    real(kind=WP), intent(inout), dimension(:,:) :: dtr_bf
 
     integer                                :: elem,k
-    integer                                :: n2,nl1,nl2,nz,n,id,ul1
-    real(kind=WP)                          :: vd_flux(mesh%nl)
+    integer                                :: n2,nl1,nl2,nz,n,ul1
+    real(kind=WP)                          :: vd_flux(nl)
     integer                                :: nlevels_nod2D_minimum
-    real(kind=WP)                          :: bottom_flux(partit%myDim_nod2D+partit%eDim_nod2D)
+    real(kind=WP)                          :: bottom_flux(myDim_nod2D + eDim_nod2D)
 
     real(kind=WP), dimension(:,:), pointer :: trarr
 
-    trarr=>tracers%data(tr_num)%values(:,:)
-
-
     bottom_flux = 0._WP
-    id = tracers%data(tr_num)%ID
 
 #if defined(__recom)
 if (use_MEDUSA .and. (sedflx_num .ne. 0)) then
@@ -384,38 +384,38 @@ if (use_MEDUSA .and. (sedflx_num .ne. 0)) then
    !rather than  a flux in  (mol/time/area). I therefore  multiply the
    !Medusa fluxes by the area to get the same unit.
 
-   SELECT CASE (id)
+   SELECT CASE (tracer_id)
     CASE (1001)
-      bottom_flux = GloSed(:,1) * mesh%area(1,:) ! DIN
+      bottom_flux = GloSed(:,1) * area(1,:) ! DIN
     CASE (1002)
-      bottom_flux = GloSed(:,2) * mesh%area(1,:) ! DIC
+      bottom_flux = GloSed(:,2) * area(1,:) ! DIC
     CASE (1003)
-      bottom_flux = GloSed(:,3) * mesh%area(1,:) ! Alk
+      bottom_flux = GloSed(:,3) * area(1,:) ! Alk
     CASE (1018)
-      bottom_flux = GloSed(:,4) * mesh%area(1,:) ! Si
+      bottom_flux = GloSed(:,4) * area(1,:) ! Si
     CASE (1019)
-      bottom_flux = GloSed(:,1) * Fe2N_benthos * mesh%area(1,:)
+      bottom_flux = GloSed(:,1) * Fe2N_benthos * area(1,:)
     CASE (1022)
-      bottom_flux = GloSed(:,5) * mesh%area(1,:) ! Oxy
+      bottom_flux = GloSed(:,5) * area(1,:) ! Oxy
     CASE (1302)
       if (ciso) then
-        bottom_flux = GloSed(:,6) * mesh%area(1,:) ! DIC_13 and Calc: DIC_13
+        bottom_flux = GloSed(:,6) * area(1,:) ! DIC_13 and Calc: DIC_13
       end if
     CASE (1402)
       if (ciso) then
-        bottom_flux = GloSed(:,7) * mesh%area(1,:) ! DIC_14 and Calc: DIC_14
+        bottom_flux = GloSed(:,7) * area(1,:) ! DIC_14 and Calc: DIC_14
       end if
     CASE DEFAULT
-      if (partit%mype==0) then
+      if (mype==0) then
         write(*,*) 'check specified in boundary conditions'
         write(*,*) 'the model will stop!'
       end if
       ! This can be improved later on
-      call MPI_ABORT(partit%MPI_COMM_FESOM, 1)
+      call MPI_ABORT(MPI_COMM_FESOM, 1)
       stop
   END SELECT
 else
-    SELECT CASE (id)
+    SELECT CASE (tracer_id)
        CASE (1001)
           bottom_flux = GlodecayBenthos(:,1) !*** DIN [mmolN/m^2/s] ***
        CASE (1002)
@@ -437,41 +437,41 @@ else
            bottom_flux = GlodecayBenthos(:,7) + GlodecayBenthos(:,8) !*** DIC_14 and Calc: DIC_14 ***
          end if
        CASE DEFAULT
-          if (partit%mype==0) then
+          if (mype==0) then
              write(*,*) 'check specified in boundary conditions'
              write(*,*) 'the model will stop!'
           end if
           ! This can be improved later on
-          call MPI_ABORT(partit%MPI_COMM_FESOM, 1)
+          call MPI_ABORT(MPI_COMM_FESOM, 1)
           stop
     END SELECT
 endif ! (use_MEDUSA .and. (sedflux_num .gt. 0))  
 #endif
 
-    do n=1, partit%myDim_nod2D
+    do n=1, myDim_nod2D
 
-        nl1=mesh%nlevels_nod2D(n)-1
-        ul1=mesh%ulevels_nod2D(n)
+        nl1=nlevels_nod2D(n)-1
+        ul1=ulevels_nod2D(n)
 
         vd_flux=0._WP
 
-        k=mesh%nod_in_elem2D_num(n)
+        k=nod_in_elem2D_num(n)
         ! Screening minimum depth in neigbouring nodes around node n
-        nlevels_nod2D_minimum=minval(mesh%nlevels(mesh%nod_in_elem2D(1:k, n))-1)
+        nlevels_nod2D_minimum=minval(nlevels(nod_in_elem2D(1:k, n))-1)
 
         !_______________________________________________________________________
         ! Bottom flux
         do nz=nlevels_nod2D_minimum, nl1
-            vd_flux(nz)=(mesh%area(nz,n)-mesh%area(nz+1,n))* bottom_flux(n)/(mesh%area(1,n))  !!!!!!!!
+            vd_flux(nz)=(area(nz,n)-area(nz+1,n))* bottom_flux(n)/(area(1,n))  !!!!!!!!
         end do
         nz=nl1
-        vd_flux(nz+1)= (mesh%area(nz+1,n))* bottom_flux(n)/(mesh%area(1,n))
+        vd_flux(nz+1)= (area(nz+1,n))* bottom_flux(n)/(area(1,n))
         !_______________________________________________________________________
         ! writing flux into rhs
         do nz=ul1,nl1
             ! flux contribute only the cell through its bottom !!!
 !            dtr_bf(nz,n) = dtr_bf(nz,n) + vd_flux(nz+1)*dt/area(nz,n)/(zbar_3d_n(nz,n)-zbar_3d_n(nz+1,n))
-            dtr_bf(nz,n) = dtr_bf(nz,n) + vd_flux(nz+1)*dt/mesh%areasvol(nz,n)/mesh%hnode_new(nz,n)
+            dtr_bf(nz,n) = dtr_bf(nz,n) + vd_flux(nz+1)*dt/areasvol(nz,n)/hnode_new(nz,n)
         end do
     end do
 end subroutine diff_ver_recom_expl
