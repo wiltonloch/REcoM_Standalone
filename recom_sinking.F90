@@ -19,15 +19,17 @@ module ver_sinking_recom_interface
   interface
         subroutine ver_sinking_recom(tr_num, nl, ulevels_nod2D, nlevels_nod2D, zbar_3d_n, z_3d_n, &
                                      nod_in_elem2D_num, nod_in_elem2D, nlevels, area, areasvol,   &
-                                     hnode, hnode_new, tracer_id, tracer_data_values, myDim_nod2d)
+                                     hnode, hnode_new, tracer_id, tracer_data_values,             &
+                                     myDim_nod2d, vert_sink)
         use o_param, only: wp
-        integer,       intent(in)                 :: tr_num, myDim_nod2d
-        integer,       intent(in)                 :: nl, tracer_id
-        integer,       intent(in), dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
-        integer,       intent(in), dimension(:)   :: nod_in_elem2D_num, nlevels
-        integer,       intent(in), dimension(:,:) :: nod_in_elem2D
-        real(kind=WP), intent(in), dimension(:,:) :: zbar_3d_n, z_3d_n, area, areasvol, hnode, hnode_new
-        real(kind=WP), intent(in), dimension(:,:) :: tracer_data_values
+        integer,       intent(in)                    :: tr_num, myDim_nod2d
+        integer,       intent(in)                    :: nl, tracer_id
+        integer,       intent(in),    dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
+        integer,       intent(in),    dimension(:)   :: nod_in_elem2D_num, nlevels
+        integer,       intent(in),    dimension(:,:) :: nod_in_elem2D
+        real(kind=WP), intent(in),    dimension(:,:) :: zbar_3d_n, z_3d_n, area, areasvol, hnode, hnode_new
+        real(kind=WP), intent(in),    dimension(:,:) :: tracer_data_values
+        real(kind=WP), intent(inout), dimension(:,:) :: vert_sink
     end subroutine
   end interface
 end module
@@ -477,14 +479,14 @@ endif ! (use_MEDUSA .and. (sedflux_num .gt. 0))
     end do
 end subroutine diff_ver_recom_expl
 
-subroutine ver_sinking_recom(tr_num, nl, ulevels_nod2D, nlevels_nod2D, zbar_3d_n, z_3d_n, &
-                             nod_in_elem2D_num, nod_in_elem2D, nlevels, area, areasvol,   &
-                             hnode, hnode_new, tracer_id, tracer_data_values, myDim_nod2d)
+subroutine ver_sinking_recom(tr_num, nl, ulevels_nod2D, nlevels_nod2D, zbar_3d_n, z_3d_n,  &
+                             nod_in_elem2D_num, nod_in_elem2D, nlevels, area, areasvol,    &
+                             hnode, hnode_new, tracer_id, tracer_data_values, myDim_nod2d, &
+                             vert_sink)
 ! Sinking in water column
 
     use g_clock, only: dt
     use o_param, only: wp
-    use o_arrays, only: vert_sink
 
     use REcoM_declarations
     use REcoM_LocVar
@@ -494,13 +496,14 @@ subroutine ver_sinking_recom(tr_num, nl, ulevels_nod2D, nlevels_nod2D, zbar_3d_n
 
     implicit none
 
-    integer,       intent(in)                 :: tr_num, myDim_nod2D
-    integer,       intent(in)                 :: nl, tracer_id
-    integer,       intent(in), dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
-    integer,       intent(in), dimension(:)   :: nod_in_elem2D_num, nlevels
-    integer,       intent(in), dimension(:,:) :: nod_in_elem2D
-    real(kind=WP), intent(in), dimension(:,:) :: zbar_3d_n, z_3d_n, area, areasvol, hnode, hnode_new
-    real(kind=WP), intent(in), dimension(:,:) :: tracer_data_values
+    integer,       intent(in)                    :: tr_num, myDim_nod2D
+    integer,       intent(in)                    :: nl, tracer_id
+    integer,       intent(in),    dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
+    integer,       intent(in),    dimension(:)   :: nod_in_elem2D_num, nlevels
+    integer,       intent(in),    dimension(:,:) :: nod_in_elem2D
+    real(kind=WP), intent(in),    dimension(:,:) :: zbar_3d_n, z_3d_n, area, areasvol, hnode, hnode_new
+    real(kind=WP), intent(in),    dimension(:,:) :: tracer_data_values
+    real(kind=WP), intent(inout), dimension(:,:) :: vert_sink
 
     integer                     :: node, nz,  id, nzmin, nzmax, n, k, nlevels_nod2D_minimum
     real(kind=8)                :: wLoc, wM, wPs, aux
