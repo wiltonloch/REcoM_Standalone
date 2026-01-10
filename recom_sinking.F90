@@ -73,17 +73,15 @@ end module
 
 module get_particle_density_interface
   interface
-    subroutine get_particle_density(tracers, myDim_nod2d, eDim_nod2D, nl, ulevels_nod2D, nlevels_nod2D)
-
-        use MOD_MESH, only: t_mesh
-        use MOD_PARTIT, only: t_partit
-        use MOD_TRACER, only: t_tracer
+    subroutine get_particle_density(num_tracers, myDim_nod2d, eDim_nod2D, nl, ulevels_nod2D, &
+                                    nlevels_nod2D, tracers_info)
+        use recom_glovar
 
         implicit none
 
-        integer,      intent(in)              :: myDim_nod2d, eDim_nod2D, nl
-        integer,      intent(in), dimension(:)    :: ulevels_nod2D, nlevels_nod2D
-        type(t_tracer), intent(inout), target :: tracers
+        integer, intent(in)                 :: myDim_nod2d, eDim_nod2D, nl, num_tracers
+        integer, intent(in), dimension(:)   :: ulevels_nod2D, nlevels_nod2D
+        type(tracers_info_type), intent(in) :: tracers_info
       end subroutine
   end interface
 end module
@@ -836,34 +834,29 @@ end subroutine ballast
 ! Subroutine calculate density of particle
 ! depending on composition (detC, detOpal, detCaCO3) based on Cram et al. (2018)
 !-------------------------------------------------------------------------------
-subroutine get_particle_density(tracers, myDim_nod2d, eDim_nod2D, nl, ulevels_nod2D, nlevels_nod2D)
-
-    use MOD_MESH, only: t_mesh
-    use MOD_PARTIT, only: t_partit
-    use MOD_TRACER, only: t_tracer
+subroutine get_particle_density(num_tracers, myDim_nod2d, eDim_nod2D, nl, ulevels_nod2D, &
+                                nlevels_nod2D, tracers_info)
 
     use recom_config
     use recom_glovar
 
     implicit none
 
-    integer,      intent(in)              :: myDim_nod2d, eDim_nod2D, nl
-    integer,      intent(in), dimension(:)    :: ulevels_nod2D, nlevels_nod2D
-    type(t_tracer), intent(inout), target :: tracers
+    integer, intent(in)                 :: myDim_nod2d, eDim_nod2D, nl, num_tracers
+    integer, intent(in), dimension(:)   :: ulevels_nod2D, nlevels_nod2D
+    type(tracers_info_type), intent(in) :: tracers_info
 
-    integer                               :: row, k, nzmin, nzmax, tr_num, num_tracers
+    integer      :: row, k, nzmin, nzmax, tr_num
 
-    real(kind=8)                          :: a1(nl-1, myDim_nod2D+eDim_nod2D) ! [n.d.] fraction of carbon in detritus class
-    real(kind=8)                          :: a2(nl-1, myDim_nod2D+eDim_nod2D) ! [n.d.] fraction of nitrogen in detritus class
-    real(kind=8)                          :: a3(nl-1, myDim_nod2D+eDim_nod2D) ! [n.d.] fraction of Opal in detritus class
-    real(kind=8)                          :: a4(nl-1, myDim_nod2D+eDim_nod2D) ! [n.d.] fraction of CaCO3 in detritus class
-    real(kind=8)                          :: b1(nl-1, myDim_nod2D+eDim_nod2D)
-    real(kind=8)                          :: b2(nl-1, myDim_nod2D+eDim_nod2D)
-    real(kind=8)                          :: b3(nl-1, myDim_nod2D+eDim_nod2D)
-    real(kind=8)                          :: b4(nl-1, myDim_nod2D+eDim_nod2D)
-    real(kind=8)                          :: aux(nl-1, myDim_nod2D+eDim_nod2D)
-
-    num_tracers=tracers%num_tracers
+    real(kind=8) :: a1(nl-1, myDim_nod2D+eDim_nod2D) ! [n.d.] fraction of carbon in detritus class
+    real(kind=8) :: a2(nl-1, myDim_nod2D+eDim_nod2D) ! [n.d.] fraction of nitrogen in detritus class
+    real(kind=8) :: a3(nl-1, myDim_nod2D+eDim_nod2D) ! [n.d.] fraction of Opal in detritus class
+    real(kind=8) :: a4(nl-1, myDim_nod2D+eDim_nod2D) ! [n.d.] fraction of CaCO3 in detritus class
+    real(kind=8) :: b1(nl-1, myDim_nod2D+eDim_nod2D)
+    real(kind=8) :: b2(nl-1, myDim_nod2D+eDim_nod2D)
+    real(kind=8) :: b3(nl-1, myDim_nod2D+eDim_nod2D)
+    real(kind=8) :: b4(nl-1, myDim_nod2D+eDim_nod2D)
+    real(kind=8) :: aux(nl-1, myDim_nod2D+eDim_nod2D)
 
     rho_particle1 = 0.0
     b1 = 0.0
@@ -874,10 +867,10 @@ subroutine get_particle_density(tracers, myDim_nod2d, eDim_nod2D, nl, ulevels_no
 
 ! Below guarantees non-negative tracer field
     do tr_num=1,num_tracers
-        if (tracers%data(tr_num)%ID==1008)  b1 = max(tiny,tracers%data(tr_num)%values(:,:)) !idetc      ! [mmol m-3] detritus carbon
-        if (tracers%data(tr_num)%ID==1007)  b2 = max(tiny,tracers%data(tr_num)%values(:,:)) !idetn      ! [mmol m-3] detritus nitrogen
-        if (tracers%data(tr_num)%ID==1017)  b3 = max(tiny,tracers%data(tr_num)%values(:,:)) !idetsi     ! [mmol m-3] detritus Si
-        if (tracers%data(tr_num)%ID==1021)  b4 = max(tiny,tracers%data(tr_num)%values(:,:)) !idetcal    ! [mmol m-3] detritus CaCO3
+        if (tracers_info%ids(tr_num)==1008)  b1 = max(tiny,tracers_info%data_pointers(tr_num)%tracer_data(:,:)) !idetc      ! [mmol m-3] detritus carbon
+        if (tracers_info%ids(tr_num)==1007)  b2 = max(tiny,tracers_info%data_pointers(tr_num)%tracer_data(:,:)) !idetn      ! [mmol m-3] detritus nitrogen
+        if (tracers_info%ids(tr_num)==1017)  b3 = max(tiny,tracers_info%data_pointers(tr_num)%tracer_data(:,:)) !idetsi     ! [mmol m-3] detritus Si
+        if (tracers_info%ids(tr_num)==1021)  b4 = max(tiny,tracers_info%data_pointers(tr_num)%tracer_data(:,:)) !idetcal    ! [mmol m-3] detritus CaCO3
     end do
 
     do row=1, myDim_nod2d
@@ -899,10 +892,10 @@ subroutine get_particle_density(tracers, myDim_nod2d, eDim_nod2D, nl, ulevels_no
     b4 = 0.0
     aux = 0.0
     do tr_num=1,num_tracers
-        if (tracers%data(tr_num)%ID==1026)  b1 = max(tiny,tracers%data(tr_num)%values(:,:)) !idetz2c
-        if (tracers%data(tr_num)%ID==1025)  b2 = max(tiny,tracers%data(tr_num)%values(:,:)) !idetz2n
-        if (tracers%data(tr_num)%ID==1027)  b3 = max(tiny,tracers%data(tr_num)%values(:,:)) !idetz2si
-        if (tracers%data(tr_num)%ID==1028)  b4 = max(tiny,tracers%data(tr_num)%values(:,:)) !idetz2calc
+        if (tracers_info%ids(tr_num)==1026)  b1 = max(tiny,tracers_info%data_pointers(tr_num)%tracer_data(:,:)) !idetz2c
+        if (tracers_info%ids(tr_num)==1025)  b2 = max(tiny,tracers_info%data_pointers(tr_num)%tracer_data(:,:)) !idetz2n
+        if (tracers_info%ids(tr_num)==1027)  b3 = max(tiny,tracers_info%data_pointers(tr_num)%tracer_data(:,:)) !idetz2si
+        if (tracers_info%ids(tr_num)==1028)  b4 = max(tiny,tracers_info%data_pointers(tr_num)%tracer_data(:,:)) !idetz2calc
     end do
 
     do row=1, myDim_nod2d + eDim_nod2D   ! myDim is sufficient
