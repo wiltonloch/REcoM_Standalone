@@ -1540,6 +1540,16 @@ Module REcoM_GloVar
   real(kind=8), allocatable,dimension(:)    :: ErosionTSi2D, ErosionTON2D, ErosionTOC2D
 !! Cobeta, Cos(Angle of incidence)
   Real(kind=8), allocatable,dimension(:)    ::  cosAI
+
+  type :: tracer_data_pointer
+      real(kind = 8), dimension(:, :), pointer :: tracer_data
+  end type
+
+  type :: tracers_info_type
+      integer, dimension(:), allocatable                   :: ids
+      type(tracer_data_pointer), dimension(:), allocatable :: data_pointers
+  end type
+
 end module REcoM_GloVar
 
 !===============================================================================
