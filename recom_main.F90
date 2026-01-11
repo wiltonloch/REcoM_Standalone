@@ -4,16 +4,15 @@
 ! Main REcoM 
 module recom_interface
     interface
-        subroutine recom(ice, tracers, partit, mesh)
+        subroutine recom(tracers, partit, mesh, ice_data_values)
             use mod_mesh
             use MOD_PARTIT
             use MOD_PARSUP
             use mod_tracer
-            use MOD_ICE
-            type(t_ice)   , intent(inout), target :: ice
             type(t_tracer), intent(inout), target :: tracers
             type(t_partit), intent(inout), target :: partit
             type(t_mesh)  , intent(inout), target :: mesh
+            real(kind=WP), intent(in), dimension(:)  :: ice_data_values
         end subroutine
     end interface
 end module
@@ -33,10 +32,9 @@ module bio_fluxes_interface
     end interface
 end module
 
-subroutine recom(ice, tracers, partit, mesh)
+subroutine recom(tracers, partit, mesh, ice_data_values)
     use MOD_MESH, only: t_mesh
     use MOD_TRACER, only: t_tracer
-    use MOD_ICE, only: t_ice
     use MOD_PARTIT, only: t_partit
 
     use o_PARAM, only: wp, rad, kappa
@@ -58,11 +56,8 @@ subroutine recom(ice, tracers, partit, mesh)
     type(t_tracer), intent(inout), target :: tracers
     type(t_partit), intent(inout), target :: partit
     type(t_mesh)  , intent(inout), target :: mesh
-    type(t_ice)   , intent(inout), target :: ice
+    real(kind=WP), intent(in), dimension(:)  :: ice_data_values
     !___________________________________________________________________________
-
-    ! pointer on necessary derived types
-    real(kind=WP), dimension(:), pointer  :: a_ice
 
 ! ======================================================================================
 !! Depth information
@@ -108,7 +103,6 @@ subroutine recom(ice, tracers, partit, mesh)
 
     !< ice concentration [0 to 1]
 
-    a_ice       => ice%data(1)%values(:)
     num_tracers = tracers%num_tracers
 
     !< alkalinity restoring to climatology
@@ -143,7 +137,7 @@ subroutine recom(ice, tracers, partit, mesh)
         nzmax = mesh%nlevels_nod2D(n)-1
 
         !!---- This is needed for piston velocity
-        Loc_ice_conc = a_ice(n)
+        Loc_ice_conc = ice_data_values(n)
 
         !!---- Mean sea level pressure
 #if defined (__oasis)
@@ -200,7 +194,7 @@ subroutine recom(ice, tracers, partit, mesh)
 
         !!---- Shortwave penetration
         SW = parFrac * shortwave(n)
-        SW = SW * (1.d0 - a_ice(n))
+        SW = SW * (1.d0 - ice_data_values(n))
 
         !!---- Temperature in water column
         Temp(1:nzmax) = tracers%data(1)%values(1:nzmax, n)
@@ -243,9 +237,9 @@ subroutine recom(ice, tracers, partit, mesh)
         !!---- The PAR in the local water column is initialized
         PAR(1:nzmax) = 0.d0
 
-        !!---- a_ice(row): Ice concentration in the local node
-        FeDust = GloFeDust(n) * (1.d0 - a_ice(n)) * dust_sol
-        NDust  = GloNDust(n)  * (1.d0 - a_ice(n))
+        !!---- ice_data_values(row): Ice concentration in the local node
+        FeDust = GloFeDust(n) * (1.d0 - ice_data_values(n)) * dust_sol
+        NDust  = GloNDust(n)  * (1.d0 - ice_data_values(n))
 
         if (Diags) then
             ! Allocate and initialize all diagnostic arrays for a water column
