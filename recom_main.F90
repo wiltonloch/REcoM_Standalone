@@ -4,14 +4,12 @@
 ! Main REcoM 
 module recom_interface
     interface
-        subroutine recom(ice, dynamics, tracers, partit, mesh)
+        subroutine recom(ice, tracers, partit, mesh)
             use mod_mesh
             use MOD_PARTIT
             use MOD_PARSUP
             use mod_tracer
-            use MOD_DYN
             use MOD_ICE
-            type(t_dyn)   , intent(inout), target :: dynamics
             type(t_ice)   , intent(inout), target :: ice
             type(t_tracer), intent(inout), target :: tracers
             type(t_partit), intent(inout), target :: partit
@@ -35,10 +33,9 @@ module bio_fluxes_interface
     end interface
 end module
 
-subroutine recom(ice, dynamics, tracers, partit, mesh)
+subroutine recom(ice, tracers, partit, mesh)
     use MOD_MESH, only: t_mesh
     use MOD_TRACER, only: t_tracer
-    use MOD_DYN, only: t_dyn
     use MOD_ICE, only: t_ice
     use MOD_PARTIT, only: t_partit
 
@@ -58,7 +55,6 @@ subroutine recom(ice, dynamics, tracers, partit, mesh)
 
     implicit none
 
-    type(t_dyn)   , intent(inout), target :: dynamics
     type(t_tracer), intent(inout), target :: tracers
     type(t_partit), intent(inout), target :: partit
     type(t_mesh)  , intent(inout), target :: mesh
