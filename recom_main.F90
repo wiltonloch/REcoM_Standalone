@@ -4,24 +4,25 @@
 ! Main REcoM 
 module recom_interface
     interface
-        subroutine recom(tracers, partit, ice_data_values, nl, ulevels_nod2D, & 
+        subroutine recom(partit, ice_data_values, nl, ulevels_nod2D, & 
                          nlevels_nod2D, hnode, z_3d_n, zbar_3d_n, geo_coord_nod2D,  &
                          ocean_area, areasvol, myDim_nod2d, eDim_nod2D, mype,       &
-                         MPI_COMM_FESOM)
+                         MPI_COMM_FESOM, tracers_info, num_tracers, tra_recom_sms)
             use MOD_PARTIT
             use MOD_PARSUP
-            use mod_tracer
+            use recom_glovar
 
-            integer, intent(in)                        :: nl, myDim_nod2d, eDim_nod2D
-            integer, intent(in)                        :: mype, MPI_COMM_FESOM
-            integer, intent(in), dimension(:)          :: ulevels_nod2D, nlevels_nod2D 
-            real(kind=WP), intent(in)                  :: ocean_area
-            real(kind=WP), intent(in), dimension(:)    :: ice_data_values
-            real(kind=WP), intent(in), dimension(:, :) :: hnode, z_3d_n, zbar_3d_n
-            real(kind=WP), intent(in), dimension(:, :) :: geo_coord_nod2D, areasvol
+            integer, intent(in)                              :: nl, myDim_nod2d, eDim_nod2D
+            integer, intent(in)                              :: mype, MPI_COMM_FESOM, num_tracers
+            integer, intent(in), dimension(:)                :: ulevels_nod2D, nlevels_nod2D 
+            real(kind=WP), intent(in)                        :: ocean_area
+            real(kind=WP), intent(in), dimension(:)          :: ice_data_values
+            real(kind=WP), intent(in), dimension(:, :)       :: hnode, z_3d_n, zbar_3d_n
+            real(kind=WP), intent(in), dimension(:, :)       :: geo_coord_nod2D, areasvol
+            real(kind=WP), intent(inout), dimension(:, :, :) :: tra_recom_sms
 
-            type(t_tracer), intent(inout), target :: tracers
             type(t_partit), intent(inout), target :: partit
+            type(tracers_info_type), intent(in) :: tracers_info
         end subroutine
     end interface
 end module
@@ -41,10 +42,9 @@ module bio_fluxes_interface
     end interface
 end module
 
-subroutine recom(tracers, partit, ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnode, &
+subroutine recom(partit, ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnode, &
                  z_3d_n, zbar_3d_n, geo_coord_nod2D, ocean_area, areasvol, myDim_nod2d,           &
-                 eDim_nod2D, mype, MPI_COMM_FESOM)
-    use MOD_TRACER, only: t_tracer
+                 eDim_nod2D, mype, MPI_COMM_FESOM, tracers_info, num_tracers, tra_recom_sms)
     use MOD_PARTIT, only: t_partit
 
     use o_PARAM, only: wp, rad, kappa
@@ -64,16 +64,17 @@ subroutine recom(tracers, partit, ice_data_values, nl, ulevels_nod2D, nlevels_no
 
     implicit none
 
-    integer, intent(in)                        :: nl, myDim_nod2d, eDim_nod2D
-    integer, intent(in)                        :: mype, MPI_COMM_FESOM
-    integer, intent(in), dimension(:)          :: ulevels_nod2D, nlevels_nod2D 
-    real(kind=WP), intent(in)                  :: ocean_area
-    real(kind=WP), intent(in), dimension(:)    :: ice_data_values
-    real(kind=WP), intent(in), dimension(:, :) :: hnode, z_3d_n, zbar_3d_n
-    real(kind=WP), intent(in), dimension(:, :) :: geo_coord_nod2D, areasvol
+    integer, intent(in)                              :: nl, myDim_nod2d, eDim_nod2D
+    integer, intent(in)                              :: mype, MPI_COMM_FESOM, num_tracers
+    integer, intent(in), dimension(:)                :: ulevels_nod2D, nlevels_nod2D 
+    real(kind=WP), intent(in)                        :: ocean_area
+    real(kind=WP), intent(in), dimension(:)          :: ice_data_values
+    real(kind=WP), intent(in), dimension(:, :)       :: hnode, z_3d_n, zbar_3d_n
+    real(kind=WP), intent(in), dimension(:, :)       :: geo_coord_nod2D, areasvol
+    real(kind=WP), intent(inout), dimension(:, :, :) :: tra_recom_sms
 
-    type(t_tracer), intent(inout), target :: tracers
     type(t_partit), intent(inout), target :: partit
+    type(tracers_info_type), intent(in) :: tracers_info
 
     !___________________________________________________________________________
 
@@ -91,7 +92,7 @@ subroutine recom(tracers, partit, ice_data_values, nl, ulevels_nod2D, nlevels_no
 ! ======================================================================================
 
     real(kind=8)               :: SW, Loc_slp
-    integer                    :: tr_num, num_tracers
+    integer                    :: tr_num
     integer                    :: nz, n, nzmin, nzmax
     integer                    :: idiags
 
@@ -112,7 +113,7 @@ subroutine recom(tracers, partit, ice_data_values, nl, ulevels_nod2D, nlevels_no
     real(kind=8),  allocatable :: OmegaC_watercolumn(:)
     real(kind=8),  allocatable :: kspc_watercolumn(:)
     real(kind=8),  allocatable :: rhoSW_watercolumn(:)
-    real(kind=WP)              :: ttf_rhs_bak (nl-1, tracers%num_tracers) ! local variable
+    real(kind=WP)              :: ttf_rhs_bak (nl-1, num_tracers) ! local variable
 
     allocate(Temp(nl-1), Sali_depth(nl-1), zr(nl-1) , PAR(nl-1))
     allocate(C(nl-1, bgc_num))
@@ -121,12 +122,10 @@ subroutine recom(tracers, partit, ice_data_values, nl, ulevels_nod2D, nlevels_no
 
     !< ice concentration [0 to 1]
 
-    num_tracers = tracers%num_tracers
-
     !< alkalinity restoring to climatology
     !< virtual flux is possible
 
-    if (restore_alkalinity) call bio_fluxes(tracers%data(2+ialk)%values(:,:), MPI_COMM_FESOM, &
+    if (restore_alkalinity) call bio_fluxes(tracers_info%data_pointers(2+ialk)%tracer_data(:,:), MPI_COMM_FESOM, &
                                             myDim_nod2D, eDim_nod2D, ocean_area,  &
                                             ulevels_nod2D, areasvol)
     if (recom_debug .and. mype==0) print *, achar(27)//'[36m'//'     --> bio_fluxes'//achar(27)//'[0m'
@@ -215,11 +214,11 @@ subroutine recom(tracers, partit, ice_data_values, nl, ulevels_nod2D, nlevels_no
         SW = SW * (1.d0 - ice_data_values(n))
 
         !!---- Temperature in water column
-        Temp(1:nzmax) = tracers%data(1)%values(1:nzmax, n)
+        Temp(1:nzmax) = tracers_info%data_pointers(1)%tracer_data(1:nzmax, n)
 
         !!---- Surface salinity
-        Sali                = tracers%data(2)%values(1, n)
-        Sali_depth(1:nzmax) = tracers%data(2)%values(1:nzmax, n)
+        Sali                = tracers_info%data_pointers(2)%tracer_data(1, n)
+        Sali_depth(1:nzmax) = tracers_info%data_pointers(2)%tracer_data(1:nzmax, n)
 
 
         !!---- CO2 in the watercolumn
@@ -237,15 +236,15 @@ subroutine recom(tracers, partit, ice_data_values, nl, ulevels_nod2D, nlevels_no
 
         !!---- Biogeochemical tracers
         do tr_num = num_tracers-bgc_num+1, num_tracers
-            C(1:nzmax, tr_num-2) = tracers%data(tr_num)%values(1:nzmax, n)
+            C(1:nzmax, tr_num-2) = tracers_info%data_pointers(tr_num)%tracer_data(1:nzmax, n)
         end do
 
         ttf_rhs_bak = 0.0
 
 
         do tr_num=1, num_tracers
-            if (tracers%data(tr_num)%ltra_diag) then
-                ttf_rhs_bak(1:nzmax,tr_num) = tracers%data(tr_num)%values(1:nzmax, n)
+            if (tracers_info%ltra_diag(tr_num)) then
+                ttf_rhs_bak(1:nzmax,tr_num) = tracers_info%data_pointers(tr_num)%tracer_data(1:nzmax, n)
             end if
         end do
 
@@ -391,14 +390,14 @@ subroutine recom(tracers, partit, ice_data_values, nl, ulevels_nod2D, nlevels_no
                            geo_coord_nod2D, daynew, ndpyr, dt, kappa, mstep, rad)
 
         do tr_num = num_tracers-bgc_num+1, num_tracers !bgc_num+2
-            tracers%data(tr_num)%values(1:nzmax, n) = C(1:nzmax, tr_num-2)
+            tracers_info%data_pointers(tr_num)%tracer_data(1:nzmax, n) = C(1:nzmax, tr_num-2)
         end do
 
         ! recom_sms
 
            do tr_num=1, num_tracers
-               if (tracers%data(tr_num)%ltra_diag) then
-                   tracers%work%tra_recom_sms(1:nzmax,n,tr_num) = tracers%data(tr_num)%values(1:nzmax, n) - ttf_rhs_bak(1:nzmax,tr_num)
+               if (tracers_info%ltra_diag(tr_num)) then
+                   tra_recom_sms(1:nzmax,n,tr_num) = tracers_info%data_pointers(tr_num)%tracer_data(1:nzmax, n) - ttf_rhs_bak(1:nzmax,tr_num)
              !if (mype==0)  print *,  tra_recom_sms(:,:,tr_num)
                end if
 
@@ -568,7 +567,7 @@ subroutine recom(tracers, partit, ice_data_values, nl, ulevels_nod2D, nlevels_no
 !************************** EXCHANGE NODAL INFORMATION *********************************
 
     do tr_num=num_tracers-bgc_num+1, num_tracers
-        call exchange_nod(tracers%data(tr_num)%values(:,:), partit)
+        call exchange_nod(tracers_info%data_pointers(tr_num)%tracer_data(:,:), partit)
     end do
 
     call exchange_nod(GloPCO2surf, partit)

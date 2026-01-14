@@ -1547,6 +1547,7 @@ Module REcoM_GloVar
 
   type :: tracers_info_type
       integer, dimension(:), allocatable                   :: ids
+      logical, dimension(:), allocatable                   :: ltra_diag
       type(tracer_data_pointer), dimension(:), allocatable :: data_pointers
   end type
 
