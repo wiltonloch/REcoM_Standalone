@@ -50,7 +50,7 @@ subroutine recom(partit, ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnod
     use o_PARAM, only: wp, rad, kappa
     use g_clock, only: dt, daynew, month, mstep, ndpyr, yearold
     use g_forcing_arrays, only: press_air, u_wind, v_wind, shortwave
-    use g_comm_auto, only: exchange_nod
+    use recom_g_comm_auto, only: recom_exchange_nod
 
     use recom_declarations
     use bio_fluxes_interface
@@ -567,98 +567,98 @@ subroutine recom(partit, ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnod
 !************************** EXCHANGE NODAL INFORMATION *********************************
 
     do tr_num=num_tracers-bgc_num+1, num_tracers
-        call exchange_nod(tracers_info%data_pointers(tr_num)%tracer_data(:,:), partit)
+        call recom_exchange_nod(tracers_info%data_pointers(tr_num)%tracer_data(:,:), partit)
     end do
 
-    call exchange_nod(GloPCO2surf, partit)
-    call exchange_nod(GlodPCO2surf, partit)
-    call exchange_nod(GloCO2flux, partit)
-    call exchange_nod(GloCO2flux_seaicemask, partit)
+    call recom_exchange_nod(GloPCO2surf, partit)
+    call recom_exchange_nod(GlodPCO2surf, partit)
+    call recom_exchange_nod(GloCO2flux, partit)
+    call recom_exchange_nod(GloCO2flux_seaicemask, partit)
 
-    call exchange_nod(GloO2flux_seaicemask, partit)
+    call recom_exchange_nod(GloO2flux_seaicemask, partit)
     if (ciso) then
-        call exchange_nod(GloPCO2surf_13, partit)
-        call exchange_nod(GloCO2flux_13, partit)
-        call exchange_nod(GloCO2flux_seaicemask_13, partit)
+        call recom_exchange_nod(GloPCO2surf_13, partit)
+        call recom_exchange_nod(GloCO2flux_13, partit)
+        call recom_exchange_nod(GloCO2flux_seaicemask_13, partit)
         if (ciso_14) then
-            call exchange_nod(GloPCO2surf_14, partit)
-            call exchange_nod(GloCO2flux_14, partit)
-            call exchange_nod(GloCO2flux_seaicemask_14, partit)
+            call recom_exchange_nod(GloPCO2surf_14, partit)
+            call recom_exchange_nod(GloCO2flux_14, partit)
+            call recom_exchange_nod(GloCO2flux_seaicemask_14, partit)
         end if 
     end if
     do n=1, benthos_num
-        call exchange_nod(Benthos(:,n), partit)
+        call recom_exchange_nod(Benthos(:,n), partit)
     end do
 
     if (Diags) then
-        call exchange_nod(NPPn, partit)
-        call exchange_nod(NPPd, partit)
-        call exchange_nod(GPPn, partit)
-        call exchange_nod(GPPd, partit)
-        call exchange_nod(NNAn, partit)
-        call exchange_nod(NNAd, partit)
-        call exchange_nod(Chldegn, partit)
-        call exchange_nod(Chldegd, partit)
+        call recom_exchange_nod(NPPn, partit)
+        call recom_exchange_nod(NPPd, partit)
+        call recom_exchange_nod(GPPn, partit)
+        call recom_exchange_nod(GPPd, partit)
+        call recom_exchange_nod(NNAn, partit)
+        call recom_exchange_nod(NNAd, partit)
+        call recom_exchange_nod(Chldegn, partit)
+        call recom_exchange_nod(Chldegd, partit)
         if (enable_coccos) then
-            call exchange_nod(NPPc, partit)
-            call exchange_nod(GPPc, partit)
-            call exchange_nod(NNAc, partit)
-            call exchange_nod(Chldegc, partit)
-            call exchange_nod(NPPp, partit)
-            call exchange_nod(GPPp, partit)
-            call exchange_nod(NNAp, partit)
-            call exchange_nod(Chldegp, partit)
+            call recom_exchange_nod(NPPc, partit)
+            call recom_exchange_nod(GPPc, partit)
+            call recom_exchange_nod(NNAc, partit)
+            call recom_exchange_nod(Chldegc, partit)
+            call recom_exchange_nod(NPPp, partit)
+            call recom_exchange_nod(GPPp, partit)
+            call recom_exchange_nod(NNAp, partit)
+            call recom_exchange_nod(Chldegp, partit)
         endif
-        call exchange_nod(grazmeso_tot, partit)
-        call exchange_nod(grazmeso_n, partit)
-        call exchange_nod(grazmeso_d, partit)
+        call recom_exchange_nod(grazmeso_tot, partit)
+        call recom_exchange_nod(grazmeso_n, partit)
+        call recom_exchange_nod(grazmeso_d, partit)
         if (enable_coccos) then
-            call exchange_nod(grazmeso_c, partit)
-            call exchange_nod(grazmeso_p, partit)
+            call recom_exchange_nod(grazmeso_c, partit)
+            call recom_exchange_nod(grazmeso_p, partit)
         endif
-        call exchange_nod(grazmeso_det, partit)
+        call recom_exchange_nod(grazmeso_det, partit)
         if (enable_3zoo2det) then
-            call exchange_nod(grazmeso_mic, partit)
-            call exchange_nod(grazmeso_det2, partit)
-            call exchange_nod(grazmacro_tot, partit)
-            call exchange_nod(grazmacro_n, partit)
-            call exchange_nod(grazmacro_d, partit)
+            call recom_exchange_nod(grazmeso_mic, partit)
+            call recom_exchange_nod(grazmeso_det2, partit)
+            call recom_exchange_nod(grazmacro_tot, partit)
+            call recom_exchange_nod(grazmacro_n, partit)
+            call recom_exchange_nod(grazmacro_d, partit)
             if (enable_coccos) then
-                call exchange_nod(grazmacro_c, partit)
-                call exchange_nod(grazmacro_p, partit)
+                call recom_exchange_nod(grazmacro_c, partit)
+                call recom_exchange_nod(grazmacro_p, partit)
             endif
-            call exchange_nod(grazmacro_mes, partit)
-            call exchange_nod(grazmacro_det, partit)
-            call exchange_nod(grazmacro_mic, partit)
-            call exchange_nod(grazmacro_det2, partit)
-            call exchange_nod(grazmicro_tot, partit)
-            call exchange_nod(grazmicro_n, partit)
-            call exchange_nod(grazmicro_d, partit)
+            call recom_exchange_nod(grazmacro_mes, partit)
+            call recom_exchange_nod(grazmacro_det, partit)
+            call recom_exchange_nod(grazmacro_mic, partit)
+            call recom_exchange_nod(grazmacro_det2, partit)
+            call recom_exchange_nod(grazmicro_tot, partit)
+            call recom_exchange_nod(grazmicro_n, partit)
+            call recom_exchange_nod(grazmicro_d, partit)
             if (enable_coccos) then
-                call exchange_nod(grazmicro_c, partit)
-                call exchange_nod(grazmicro_p, partit)
+                call recom_exchange_nod(grazmicro_c, partit)
+                call recom_exchange_nod(grazmicro_p, partit)
             endif
         endif
     endif
 
     do n=1, benthos_num
-        call exchange_nod(GlodecayBenthos(:,n), partit)
+        call recom_exchange_nod(GlodecayBenthos(:,n), partit)
     end do
 
-    call exchange_nod(GloHplus, partit)
-    call exchange_nod(AtmFeInput, partit)
-    call exchange_nod(AtmNInput, partit)
+    call recom_exchange_nod(GloHplus, partit)
+    call recom_exchange_nod(AtmFeInput, partit)
+    call recom_exchange_nod(AtmNInput, partit)
 
-    call exchange_nod(PAR3D, partit)
+    call recom_exchange_nod(PAR3D, partit)
 
-    call exchange_nod(CO23D, partit)
-    call exchange_nod(pH3D, partit)
-    call exchange_nod(pCO23D, partit)
-    call exchange_nod(HCO33D, partit)
-    call exchange_nod(CO33D, partit)
-    call exchange_nod(OmegaC3D, partit)
-    call exchange_nod(kspc3D, partit)
-    call exchange_nod(rhoSW3D, partit)
+    call recom_exchange_nod(CO23D, partit)
+    call recom_exchange_nod(pH3D, partit)
+    call recom_exchange_nod(pCO23D, partit)
+    call recom_exchange_nod(HCO33D, partit)
+    call recom_exchange_nod(CO33D, partit)
+    call recom_exchange_nod(OmegaC3D, partit)
+    call recom_exchange_nod(kspc3D, partit)
+    call recom_exchange_nod(rhoSW3D, partit)
 
 end subroutine recom
 
