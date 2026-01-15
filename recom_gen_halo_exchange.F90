@@ -1,0 +1,262 @@
+! ========================================================================
+! Halo exchange routines + broadcast routines that collect information
+! on the entire field (needed for output)
+! The routines here are very similar, difference is the data type and
+! exchange pattern.
+! exchange_nod2D_i(arr(myDim_nod2D+eDim_nod2D))    INTEGER
+! exchange_nod2D(arr(myDim_nod2D+eDim_nod2D))      WP
+! exchange_nod3D(arr(nl-1,myDim_nod2D+eDim_nod2D)) WP
+! exchange_nod3D_full(arr(nl,myDim_nod2D+eDim_nod2D)) WP
+! exchange_edge2D(edge_array2D)     WP  not used currently  !!! no buffer!!!
+! exchange_edge3D(edge_array3D)     WP  not used currently  !!! no buffer!!!
+! exchange_elem3D(elem_array3D)     WP
+! exchange_elem2d_full
+! exchange_elem2d_full_i
+! ========================================================================
+
+module recom_g_comm
+
+  use, intrinsic :: ISO_FORTRAN_ENV, only: int16, int32, real32, real64
+
+  implicit none
+
+contains
+
+#ifdef DEBUG
+! General version of the communication routine for 2D nodal fields
+! Only needed in debug mode
+subroutine check_mpi_comm(rn, sn, r_mpitype, s_mpitype, rPE, sPE, partit)
+use MOD_MESH
+USE MOD_PARTIT
+USE MOD_PARSUP
+IMPLICIT NONE
+type(t_partit), intent(inout), target :: partit
+integer,        intent(in)         :: sn, rn, r_mpitype(:), s_mpitype(:), rPE(:), sPE(:)
+integer                            :: n, sdebug, rdebug, status(MPI_STATUS_SIZE), request
+
+DO n=1,rn
+   CALL MPI_TYPE_SIZE(r_mpitype(n), rdebug, MPIerr)
+   CALL MPI_ISEND(rdebug, 1, MPI_INTEGER, rPE(n), 10, MPI_COMM_FESOM, request, MPIerr)
+END DO
+
+DO n=1, sn
+   call MPI_RECV(sdebug, 1, MPI_INTEGER, sPE(n), 10, MPI_COMM_FESOM,    &
+        status, MPIerr)
+   call MPI_TYPE_SIZE(s_mpitype(n), rdebug, MPIerr)
+   if (sdebug /= rdebug) then
+      print *, "Mismatching MPI send/recieve message lengths."
+      print *,"Send/receive process numbers: ", mype, '/', sPE(n)
+      print *,"Number of send/receive bytes: ", sdebug, '/', rdebug
+      call MPI_ABORT( MPI_COMM_FESOM, 1 )
+      end if
+END DO
+CALL MPI_BARRIER(MPI_COMM_FESOM,MPIerr)
+END SUBROUTINE check_mpi_comm
+#endif
+
+! ========================================================================
+! General version of the communication routine for 2D nodal fields
+subroutine recom_exchange_nod2D(nod_array2D, partit, luse_g2g)
+use MOD_MESH
+USE MOD_PARTIT
+USE MOD_PARSUP
+IMPLICIT NONE
+type(t_partit), intent(inout), target :: partit
+real(real64),   intent(inout)         :: nod_array2D(:)
+logical,        intent(in),optional   :: luse_g2g
+
+ if (partit%npes > 1) then
+    call recom_exchange_nod2D_begin(nod_array2D, partit, luse_g2g)
+    call recom_exchange_nod_end(partit)
+ end if
+
+END SUBROUTINE recom_exchange_nod2D
+
+! ========================================================================
+! General version of the communication routine for 2D nodal fields
+subroutine recom_exchange_nod2D_begin(nod_array2D, partit, luse_g2g)
+use MOD_MESH
+USE MOD_PARTIT
+USE MOD_PARSUP
+IMPLICIT NONE
+type(t_partit), intent(inout), target :: partit
+real(real64),   intent(inout)         :: nod_array2D(:)
+integer                               :: n, sn, rn
+logical,        intent(in),optional   :: luse_g2g
+logical                               :: lg2g
+
+if(present(luse_g2g)) then
+   lg2g = luse_g2g
+else
+   lg2g = .false.
+end if
+
+  if (partit%npes > 1) then
+
+     sn=partit%com_nod2D%sPEnum
+     rn=partit%com_nod2D%rPEnum
+
+     ! Check MPI point-to-point communication for consistency
+#ifdef DEBUG
+     call check_mpi_comm(rn, sn, partit%r_mpitype_nod2D, partit%s_mpitype_nod2D,           &
+          partit%com_nod2D%rPE, partit%com_nod2D%sPE)
+#endif
+
+     if(lg2g) then
+         !$ACC HOST_DATA USE_DEVICE(nod_array2D)
+
+         DO n=1,rn
+            call MPI_IRECV(nod_array2D, 1, partit%r_mpitype_nod2D(n), partit%com_nod2D%rPE(n), &
+                 partit%com_nod2D%rPE(n), partit%MPI_COMM_FESOM, partit%com_nod2D%req(n), partit%MPIerr)
+         END DO
+         DO n=1, sn
+            call MPI_ISEND(nod_array2D, 1, partit%s_mpitype_nod2D(n), partit%com_nod2D%sPE(n), &
+                 partit%mype, partit%MPI_COMM_FESOM, partit%com_nod2D%req(rn+n), partit%MPIerr)
+         END DO
+
+        !$ACC END HOST_DATA
+
+     else 
+         DO n=1,rn
+
+            call MPI_IRECV(nod_array2D, 1, partit%r_mpitype_nod2D(n), partit%com_nod2D%rPE(n), &
+                 partit%com_nod2D%rPE(n), partit%MPI_COMM_FESOM, partit%com_nod2D%req(n), partit%MPIerr)
+         END DO
+         DO n=1, sn
+            call MPI_ISEND(nod_array2D, 1, partit%s_mpitype_nod2D(n), partit%com_nod2D%sPE(n), &
+                 partit%mype, partit%MPI_COMM_FESOM, partit%com_nod2D%req(rn+n), partit%MPIerr)
+         END DO
+     endif
+     partit%com_nod2D%nreq = rn+sn
+
+  end if
+
+END SUBROUTINE recom_exchange_nod2D_begin
+
+! ========================================================================
+! General version of the communication routine for 3D nodal fields
+! stored in (vertical, horizontal) format
+subroutine recom_exchange_nod3D(nod_array3D, partit, luse_g2g)
+use MOD_MESH
+USE MOD_PARTIT
+USE MOD_PARSUP
+IMPLICIT NONE
+type(t_partit), intent(inout), target :: partit
+real(real64),   intent(inout)         :: nod_array3D(:,:)
+logical,        intent(in),optional   :: luse_g2g
+
+if (partit%npes > 1) then
+   call recom_exchange_nod3D_begin(nod_array3D, partit, luse_g2g)
+   call recom_exchange_nod_end(partit)
+endif
+
+END SUBROUTINE recom_exchange_nod3D
+
+! ========================================================================
+! General version of the communication routine for 3D nodal fields
+! stored in (vertical, horizontal) format
+subroutine recom_exchange_nod3D_begin(nod_array3D, partit, luse_g2g)
+use MOD_MESH
+USE MOD_PARTIT
+USE MOD_PARSUP
+IMPLICIT NONE
+type(t_partit), intent(inout), target :: partit
+real(real64),   intent(inout)         :: nod_array3D(:,:)
+integer                               :: n, sn, rn
+integer                               :: nz, nl1
+logical,        intent(in),optional   :: luse_g2g
+logical                               :: lg2g
+
+if(present(luse_g2g)) then
+   lg2g = luse_g2g
+else
+   lg2g = .false.
+end if
+
+ if (partit%npes > 1) then
+    sn=partit%com_nod2D%sPEnum
+    rn=partit%com_nod2D%rPEnum
+
+    nl1=ubound(nod_array3D,1)
+
+    if ((nl1<ubound(partit%r_mpitype_nod3D, 2)-1) .or. (nl1>ubound(partit%r_mpitype_nod3D, 2))) then
+       if (partit%mype==0) then
+          print *,'Subroutine recom_exchange_nod3D not implemented for',nl1,'layers.'
+          print *,'Adding the MPI datatypes is easy, see oce_modules.F90.'
+       endif
+       call par_ex(partit%MPI_COMM_FESOM, partit%mype, 1)
+    endif
+
+    ! Check MPI point-to-point communication for consistency
+#ifdef DEBUG
+    call check_mpi_comm(rn, sn, partit%r_mpitype_nod3D(:,nl1,1), partit%s_mpitype_nod3D(:,nl1,1), &
+         partit%com_nod2D%rPE, partit%com_nod2D%sPE)
+#endif
+    if(lg2g) then
+      !$ACC HOST_DATA USE_DEVICE(nod_array3D) 
+
+      DO n=1,rn
+         call MPI_IRECV(nod_array3D, 1, partit%r_mpitype_nod3D(n,nl1,1), partit%com_nod2D%rPE(n), &
+              partit%com_nod2D%rPE(n), partit%MPI_COMM_FESOM, partit%com_nod2D%req(n), partit%MPIerr)
+      END DO
+      DO n=1, sn
+         call MPI_ISEND(nod_array3D, 1, partit%s_mpitype_nod3D(n,nl1,1), partit%com_nod2D%sPE(n), &
+              partit%mype, partit%MPI_COMM_FESOM, partit%com_nod2D%req(rn+n), partit%MPIerr)
+      END DO
+
+  
+      !$ACC END HOST_DATA
+    else
+      DO n=1,rn
+         call MPI_IRECV(nod_array3D, 1, partit%r_mpitype_nod3D(n,nl1,1), partit%com_nod2D%rPE(n), &
+              partit%com_nod2D%rPE(n), partit%MPI_COMM_FESOM, partit%com_nod2D%req(n), partit%MPIerr)
+      END DO
+      DO n=1, sn
+         call MPI_ISEND(nod_array3D, 1, partit%s_mpitype_nod3D(n,nl1,1), partit%com_nod2D%sPE(n), &
+              partit%mype, partit%MPI_COMM_FESOM, partit%com_nod2D%req(rn+n), partit%MPIerr)
+      END DO
+    endif
+    partit%com_nod2D%nreq = rn+sn
+
+ endif
+END SUBROUTINE recom_exchange_nod3D_begin
+
+!=======================================
+! AND WAITING
+!=======================================
+
+SUBROUTINE recom_exchange_nod_end(partit)
+use MOD_MESH
+USE MOD_PARTIT
+USE MOD_PARSUP
+IMPLICIT NONE
+type(t_partit), intent(inout), target :: partit
+
+if (partit%npes > 1) &
+  call MPI_WAITALL(partit%com_nod2D%nreq, partit%com_nod2D%req, MPI_STATUSES_IGNORE, partit%MPIerr)
+
+END SUBROUTINE recom_exchange_nod_end
+
+end module recom_g_comm
+
+module recom_g_comm_auto
+use recom_g_comm
+implicit none
+interface recom_exchange_nod
+      module procedure recom_exchange_nod2D
+      module procedure recom_exchange_nod3D
+end interface recom_exchange_nod
+
+interface recom_exchange_nod_begin
+      module procedure recom_exchange_nod2D_begin
+      module procedure recom_exchange_nod3D_begin
+end interface recom_exchange_nod_begin
+
+!!$interface exchange_edge
+!!$      module procedure exchange_edge2D
+!!$!      module procedure exchange_edge3D  ! not available, not used
+!!$end interface exchange_edge
+
+private  ! hides items not listed on public statement
+public :: recom_exchange_nod, recom_exchange_nod_begin, recom_exchange_nod_end
+end module recom_g_comm_auto
