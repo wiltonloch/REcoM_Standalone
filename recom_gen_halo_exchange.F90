@@ -20,15 +20,14 @@ module recom_g_comm
 
   implicit none
 
+
 contains
 
 #ifdef DEBUG
 ! General version of the communication routine for 2D nodal fields
 ! Only needed in debug mode
 subroutine check_mpi_comm(rn, sn, r_mpitype, s_mpitype, rPE, sPE, partit)
-use MOD_MESH
 USE MOD_PARTIT
-USE MOD_PARSUP
 IMPLICIT NONE
 type(t_partit), intent(inout), target :: partit
 integer,        intent(in)         :: sn, rn, r_mpitype(:), s_mpitype(:), rPE(:), sPE(:)
@@ -57,9 +56,7 @@ END SUBROUTINE check_mpi_comm
 ! ========================================================================
 ! General version of the communication routine for 2D nodal fields
 subroutine recom_exchange_nod2D(nod_array2D, partit, luse_g2g)
-use MOD_MESH
 USE MOD_PARTIT
-USE MOD_PARSUP
 IMPLICIT NONE
 type(t_partit), intent(inout), target :: partit
 real(real64),   intent(inout)         :: nod_array2D(:)
@@ -67,7 +64,7 @@ logical,        intent(in),optional   :: luse_g2g
 
  if (partit%npes > 1) then
     call recom_exchange_nod2D_begin(nod_array2D, partit, luse_g2g)
-    call recom_exchange_nod_end(partit)
+    call recom_exchange_nod_end(partit%npes, partit%com_nod2D%nreq, partit%com_nod2D%req)
  end if
 
 END SUBROUTINE recom_exchange_nod2D
@@ -75,9 +72,7 @@ END SUBROUTINE recom_exchange_nod2D
 ! ========================================================================
 ! General version of the communication routine for 2D nodal fields
 subroutine recom_exchange_nod2D_begin(nod_array2D, partit, luse_g2g)
-use MOD_MESH
 USE MOD_PARTIT
-USE MOD_PARSUP
 IMPLICIT NONE
 type(t_partit), intent(inout), target :: partit
 real(real64),   intent(inout)         :: nod_array2D(:)
@@ -137,9 +132,7 @@ END SUBROUTINE recom_exchange_nod2D_begin
 ! General version of the communication routine for 3D nodal fields
 ! stored in (vertical, horizontal) format
 subroutine recom_exchange_nod3D(nod_array3D, partit, luse_g2g)
-use MOD_MESH
 USE MOD_PARTIT
-USE MOD_PARSUP
 IMPLICIT NONE
 type(t_partit), intent(inout), target :: partit
 real(real64),   intent(inout)         :: nod_array3D(:,:)
@@ -147,7 +140,7 @@ logical,        intent(in),optional   :: luse_g2g
 
 if (partit%npes > 1) then
    call recom_exchange_nod3D_begin(nod_array3D, partit, luse_g2g)
-   call recom_exchange_nod_end(partit)
+   call recom_exchange_nod_end(partit%npes, partit%com_nod2D%nreq, partit%com_nod2D%req)
 endif
 
 END SUBROUTINE recom_exchange_nod3D
@@ -156,9 +149,7 @@ END SUBROUTINE recom_exchange_nod3D
 ! General version of the communication routine for 3D nodal fields
 ! stored in (vertical, horizontal) format
 subroutine recom_exchange_nod3D_begin(nod_array3D, partit, luse_g2g)
-use MOD_MESH
 USE MOD_PARTIT
-USE MOD_PARSUP
 IMPLICIT NONE
 type(t_partit), intent(inout), target :: partit
 real(real64),   intent(inout)         :: nod_array3D(:,:)
@@ -225,15 +216,17 @@ END SUBROUTINE recom_exchange_nod3D_begin
 ! AND WAITING
 !=======================================
 
-SUBROUTINE recom_exchange_nod_end(partit)
-use MOD_MESH
-USE MOD_PARTIT
-USE MOD_PARSUP
+SUBROUTINE recom_exchange_nod_end(npes, request_count, array_of_requests)
+use mpi
 IMPLICIT NONE
-type(t_partit), intent(inout), target :: partit
 
-if (partit%npes > 1) &
-  call MPI_WAITALL(partit%com_nod2D%nreq, partit%com_nod2D%req, MPI_STATUSES_IGNORE, partit%MPIerr)
+integer, intent(in) :: request_count, npes
+integer, intent(inout), dimension(:) :: array_of_requests
+
+integer :: MPIerr
+
+if (npes > 1) &
+  call MPI_WAITALL(request_count, array_of_requests, MPI_STATUSES_IGNORE, MPIerr)
 
 END SUBROUTINE recom_exchange_nod_end
 
@@ -251,6 +244,10 @@ interface recom_exchange_nod_begin
       module procedure recom_exchange_nod2D_begin
       module procedure recom_exchange_nod3D_begin
 end interface recom_exchange_nod_begin
+
+interface recom_exchange_nod_end
+  module procedure recom_exchange_nod_end
+end interface
 
 !!$interface exchange_edge
 !!$      module procedure exchange_edge2D
