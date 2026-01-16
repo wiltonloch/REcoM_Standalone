@@ -99,7 +99,12 @@ real(real64),   intent(inout)         :: nod_array3D(:,:)
 logical,        intent(in),optional   :: luse_g2g
 
 if (partit%npes > 1) then
-   call recom_exchange_nod3D_begin(nod_array3D, partit, luse_g2g)
+   call recom_exchange_nod3D_begin(nod_array3D, partit%npes, partit%com_nod2D%sPEnum,   &
+                                   partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                   partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
+                                   partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                   partit%com_nod2D%req, partit%com_nod2D%nreq, luse_g2g)
+
    call recom_exchange_nod_end(partit%npes, partit%com_nod2D%nreq, partit%com_nod2D%req)
 endif
 
@@ -108,14 +113,21 @@ END SUBROUTINE recom_exchange_nod3D
 ! ========================================================================
 ! General version of the communication routine for 3D nodal fields
 ! stored in (vertical, horizontal) format
-subroutine recom_exchange_nod3D_begin(nod_array3D, partit, luse_g2g)
-USE MOD_PARTIT
+subroutine recom_exchange_nod3D_begin(nod_array3D, npes, sn, rn, MPI_COMM_FESOM, mype,    &
+                                      s_mpitype_nod3D, r_mpitype_nod3D, sPE, rPE, requests, nreq, &
+                                      luse_g2g)
 IMPLICIT NONE
-type(t_partit), intent(inout), target :: partit
-real(real64),   intent(inout)         :: nod_array3D(:,:)
-integer                               :: n, sn, rn
+
+logical, intent(in), optional                 :: luse_g2g
+integer, intent(in)                           :: sn, rn, npes, MPI_COMM_FESOM, mype
+integer, intent(inout)                        :: nreq
+integer, intent(in),    dimension(:)          :: sPE, rPE 
+integer, intent(inout), dimension(:)          :: requests
+integer, intent(in),    dimension(:, :, :), pointer :: s_mpitype_nod3D, r_mpitype_nod3D
+real(real64), intent(inout)                   :: nod_array3D(:,:)
+
+integer                               :: n, MPIerr
 integer                               :: nz, nl1
-logical,        intent(in),optional   :: luse_g2g
 logical                               :: lg2g
 
 if(present(luse_g2g)) then
@@ -124,45 +136,31 @@ else
    lg2g = .false.
 end if
 
- if (partit%npes > 1) then
-    sn=partit%com_nod2D%sPEnum
-    rn=partit%com_nod2D%rPEnum
+ if (npes > 1) then
 
     nl1=ubound(nod_array3D,1)
 
-    if ((nl1<ubound(partit%r_mpitype_nod3D, 2)-1) .or. (nl1>ubound(partit%r_mpitype_nod3D, 2))) then
-       if (partit%mype==0) then
+    if ((nl1<ubound(r_mpitype_nod3D, 2)-1) .or. (nl1>ubound(r_mpitype_nod3D, 2))) then
+       if (mype==0) then
           print *,'Subroutine recom_exchange_nod3D not implemented for',nl1,'layers.'
           print *,'Adding the MPI datatypes is easy, see oce_modules.F90.'
        endif
-       call par_ex(partit%MPI_COMM_FESOM, partit%mype, 1)
+       call MPI_Abort(MPI_COMM_FESOM, 1)
     endif
 
-    if(lg2g) then
-      !$ACC HOST_DATA USE_DEVICE(nod_array3D) 
+    !$ACC HOST_DATA USE_DEVICE(nod_array3D) IF(lg2g)
 
-      DO n=1,rn
-         call MPI_IRECV(nod_array3D, 1, partit%r_mpitype_nod3D(n,nl1,1), partit%com_nod2D%rPE(n), &
-              partit%com_nod2D%rPE(n), partit%MPI_COMM_FESOM, partit%com_nod2D%req(n), partit%MPIerr)
-      END DO
-      DO n=1, sn
-         call MPI_ISEND(nod_array3D, 1, partit%s_mpitype_nod3D(n,nl1,1), partit%com_nod2D%sPE(n), &
-              partit%mype, partit%MPI_COMM_FESOM, partit%com_nod2D%req(rn+n), partit%MPIerr)
-      END DO
+    DO n=1,rn
+       call MPI_IRECV(nod_array3D, 1, r_mpitype_nod3D(n,nl1,1), rPE(n), &
+                      rPE(n), MPI_COMM_FESOM, requests(n), MPIerr)
+    END DO
+    DO n=1, sn
+       call MPI_ISEND(nod_array3D, 1, s_mpitype_nod3D(n,nl1,1), sPE(n), &
+            mype, MPI_COMM_FESOM, requests(rn+n), MPIerr)
+    END DO
 
-  
-      !$ACC END HOST_DATA
-    else
-      DO n=1,rn
-         call MPI_IRECV(nod_array3D, 1, partit%r_mpitype_nod3D(n,nl1,1), partit%com_nod2D%rPE(n), &
-              partit%com_nod2D%rPE(n), partit%MPI_COMM_FESOM, partit%com_nod2D%req(n), partit%MPIerr)
-      END DO
-      DO n=1, sn
-         call MPI_ISEND(nod_array3D, 1, partit%s_mpitype_nod3D(n,nl1,1), partit%com_nod2D%sPE(n), &
-              partit%mype, partit%MPI_COMM_FESOM, partit%com_nod2D%req(rn+n), partit%MPIerr)
-      END DO
-    endif
-    partit%com_nod2D%nreq = rn+sn
+    !$ACC END HOST_DATA
+    nreq = rn+sn
 
  endif
 END SUBROUTINE recom_exchange_nod3D_begin
