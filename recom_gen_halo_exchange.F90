@@ -23,36 +23,6 @@ module recom_g_comm
 
 contains
 
-#ifdef DEBUG
-! General version of the communication routine for 2D nodal fields
-! Only needed in debug mode
-subroutine check_mpi_comm(rn, sn, r_mpitype, s_mpitype, rPE, sPE, partit)
-USE MOD_PARTIT
-IMPLICIT NONE
-type(t_partit), intent(inout), target :: partit
-integer,        intent(in)         :: sn, rn, r_mpitype(:), s_mpitype(:), rPE(:), sPE(:)
-integer                            :: n, sdebug, rdebug, status(MPI_STATUS_SIZE), request
-
-DO n=1,rn
-   CALL MPI_TYPE_SIZE(r_mpitype(n), rdebug, MPIerr)
-   CALL MPI_ISEND(rdebug, 1, MPI_INTEGER, rPE(n), 10, MPI_COMM_FESOM, request, MPIerr)
-END DO
-
-DO n=1, sn
-   call MPI_RECV(sdebug, 1, MPI_INTEGER, sPE(n), 10, MPI_COMM_FESOM,    &
-        status, MPIerr)
-   call MPI_TYPE_SIZE(s_mpitype(n), rdebug, MPIerr)
-   if (sdebug /= rdebug) then
-      print *, "Mismatching MPI send/recieve message lengths."
-      print *,"Send/receive process numbers: ", mype, '/', sPE(n)
-      print *,"Number of send/receive bytes: ", sdebug, '/', rdebug
-      call MPI_ABORT( MPI_COMM_FESOM, 1 )
-      end if
-END DO
-CALL MPI_BARRIER(MPI_COMM_FESOM,MPIerr)
-END SUBROUTINE check_mpi_comm
-#endif
-
 ! ========================================================================
 ! General version of the communication routine for 2D nodal fields
 subroutine recom_exchange_nod2D(nod_array2D, partit, luse_g2g)
@@ -63,7 +33,13 @@ real(real64),   intent(inout)         :: nod_array2D(:)
 logical,        intent(in),optional   :: luse_g2g
 
  if (partit%npes > 1) then
-    call recom_exchange_nod2D_begin(nod_array2D, partit, luse_g2g)
+     
+    call recom_exchange_nod2D_begin(nod_array2D, partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq, luse_g2g)
+
     call recom_exchange_nod_end(partit%npes, partit%com_nod2D%nreq, partit%com_nod2D%req)
  end if
 
@@ -71,13 +47,20 @@ END SUBROUTINE recom_exchange_nod2D
 
 ! ========================================================================
 ! General version of the communication routine for 2D nodal fields
-subroutine recom_exchange_nod2D_begin(nod_array2D, partit, luse_g2g)
-USE MOD_PARTIT
+subroutine recom_exchange_nod2D_begin(nod_array2D, npes, sn, rn, MPI_COMM_FESOM, mype,    &
+                                      s_mpitype_nod2D, r_mpitype_nod2D, sPE, rPE, requests, nreq, &
+                                      luse_g2g)
 IMPLICIT NONE
-type(t_partit), intent(inout), target :: partit
-real(real64),   intent(inout)         :: nod_array2D(:)
-integer                               :: n, sn, rn
-logical,        intent(in),optional   :: luse_g2g
+
+logical, intent(in), optional                 :: luse_g2g
+integer, intent(in)                           :: sn, rn, npes, MPI_COMM_FESOM, mype
+integer, intent(inout)                        :: nreq
+integer, intent(in),    dimension(:)          :: sPE, rPE 
+integer, intent(inout), dimension(:)          :: requests
+integer, intent(in),    dimension(:), pointer :: s_mpitype_nod2D, r_mpitype_nod2D
+real(real64), intent(inout)                   :: nod_array2D(:)
+
+integer                               :: n, MPIerr
 logical                               :: lg2g
 
 if(present(luse_g2g)) then
@@ -86,43 +69,20 @@ else
    lg2g = .false.
 end if
 
-  if (partit%npes > 1) then
+  if (npes > 1) then
+     !$ACC HOST_DATA USE_DEVICE(nod_array2D) IF(lg2g)
 
-     sn=partit%com_nod2D%sPEnum
-     rn=partit%com_nod2D%rPEnum
+     DO n=1,rn
+        call MPI_IRECV(nod_array2D, 1, r_mpitype_nod2D(n), rPE(n), &
+             rPE(n), MPI_COMM_FESOM, requests(n), MPIerr)
+     END DO
+     DO n=1, sn
+        call MPI_ISEND(nod_array2D, 1, s_mpitype_nod2D(n), sPE(n), &
+             mype, MPI_COMM_FESOM, requests(rn+n), MPIerr)
+     END DO
 
-     ! Check MPI point-to-point communication for consistency
-#ifdef DEBUG
-     call check_mpi_comm(rn, sn, partit%r_mpitype_nod2D, partit%s_mpitype_nod2D,           &
-          partit%com_nod2D%rPE, partit%com_nod2D%sPE)
-#endif
-
-     if(lg2g) then
-         !$ACC HOST_DATA USE_DEVICE(nod_array2D)
-
-         DO n=1,rn
-            call MPI_IRECV(nod_array2D, 1, partit%r_mpitype_nod2D(n), partit%com_nod2D%rPE(n), &
-                 partit%com_nod2D%rPE(n), partit%MPI_COMM_FESOM, partit%com_nod2D%req(n), partit%MPIerr)
-         END DO
-         DO n=1, sn
-            call MPI_ISEND(nod_array2D, 1, partit%s_mpitype_nod2D(n), partit%com_nod2D%sPE(n), &
-                 partit%mype, partit%MPI_COMM_FESOM, partit%com_nod2D%req(rn+n), partit%MPIerr)
-         END DO
-
-        !$ACC END HOST_DATA
-
-     else 
-         DO n=1,rn
-
-            call MPI_IRECV(nod_array2D, 1, partit%r_mpitype_nod2D(n), partit%com_nod2D%rPE(n), &
-                 partit%com_nod2D%rPE(n), partit%MPI_COMM_FESOM, partit%com_nod2D%req(n), partit%MPIerr)
-         END DO
-         DO n=1, sn
-            call MPI_ISEND(nod_array2D, 1, partit%s_mpitype_nod2D(n), partit%com_nod2D%sPE(n), &
-                 partit%mype, partit%MPI_COMM_FESOM, partit%com_nod2D%req(rn+n), partit%MPIerr)
-         END DO
-     endif
-     partit%com_nod2D%nreq = rn+sn
+    !$ACC END HOST_DATA
+     nreq = rn+sn
 
   end if
 
@@ -178,11 +138,6 @@ end if
        call par_ex(partit%MPI_COMM_FESOM, partit%mype, 1)
     endif
 
-    ! Check MPI point-to-point communication for consistency
-#ifdef DEBUG
-    call check_mpi_comm(rn, sn, partit%r_mpitype_nod3D(:,nl1,1), partit%s_mpitype_nod3D(:,nl1,1), &
-         partit%com_nod2D%rPE, partit%com_nod2D%sPE)
-#endif
     if(lg2g) then
       !$ACC HOST_DATA USE_DEVICE(nod_array3D) 
 
