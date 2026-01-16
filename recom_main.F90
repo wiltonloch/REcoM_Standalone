@@ -570,84 +570,361 @@ subroutine recom(partit, ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnod
         call recom_exchange_nod(tracers_info%data_pointers(tr_num)%tracer_data(:,:), partit)
     end do
 
-    call recom_exchange_nod(GloPCO2surf, partit)
-    call recom_exchange_nod(GlodPCO2surf, partit)
-    call recom_exchange_nod(GloCO2flux, partit)
-    call recom_exchange_nod(GloCO2flux_seaicemask, partit)
+    call recom_exchange_nod(GloPCO2surf, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
 
-    call recom_exchange_nod(GloO2flux_seaicemask, partit)
+    call recom_exchange_nod(GlodPCO2surf, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+
+    call recom_exchange_nod(GloCO2flux, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+
+    call recom_exchange_nod(GloCO2flux_seaicemask, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+
+    call recom_exchange_nod(GloO2flux_seaicemask, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
     if (ciso) then
-        call recom_exchange_nod(GloPCO2surf_13, partit)
-        call recom_exchange_nod(GloCO2flux_13, partit)
-        call recom_exchange_nod(GloCO2flux_seaicemask_13, partit)
+        call recom_exchange_nod(GloPCO2surf_13, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+
+        call recom_exchange_nod(GloCO2flux_13, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+
+        call recom_exchange_nod(GloCO2flux_seaicemask_13, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
         if (ciso_14) then
-            call recom_exchange_nod(GloPCO2surf_14, partit)
-            call recom_exchange_nod(GloCO2flux_14, partit)
-            call recom_exchange_nod(GloCO2flux_seaicemask_14, partit)
+            call recom_exchange_nod(GloPCO2surf_14, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+
+            call recom_exchange_nod(GloCO2flux_14, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+
+            call recom_exchange_nod(GloCO2flux_seaicemask_14, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
         end if 
     end if
     do n=1, benthos_num
-        call recom_exchange_nod(Benthos(:,n), partit)
+        call recom_exchange_nod(Benthos(:,n), &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
     end do
 
     if (Diags) then
-        call recom_exchange_nod(NPPn, partit)
-        call recom_exchange_nod(NPPd, partit)
-        call recom_exchange_nod(GPPn, partit)
-        call recom_exchange_nod(GPPd, partit)
-        call recom_exchange_nod(NNAn, partit)
-        call recom_exchange_nod(NNAd, partit)
-        call recom_exchange_nod(Chldegn, partit)
-        call recom_exchange_nod(Chldegd, partit)
+        call recom_exchange_nod(NPPn, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+        call recom_exchange_nod(NPPd, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+        call recom_exchange_nod(GPPn, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+        call recom_exchange_nod(GPPd, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+        call recom_exchange_nod(NNAn, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+        call recom_exchange_nod(NNAd, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+        call recom_exchange_nod(Chldegn, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+        call recom_exchange_nod(Chldegd, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
         if (enable_coccos) then
-            call recom_exchange_nod(NPPc, partit)
-            call recom_exchange_nod(GPPc, partit)
-            call recom_exchange_nod(NNAc, partit)
-            call recom_exchange_nod(Chldegc, partit)
-            call recom_exchange_nod(NPPp, partit)
-            call recom_exchange_nod(GPPp, partit)
-            call recom_exchange_nod(NNAp, partit)
-            call recom_exchange_nod(Chldegp, partit)
+            call recom_exchange_nod(NPPc, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(GPPc, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(NNAc, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(Chldegc, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(NPPp, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(GPPp, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(NNAp, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(Chldegp, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
         endif
-        call recom_exchange_nod(grazmeso_tot, partit)
-        call recom_exchange_nod(grazmeso_n, partit)
-        call recom_exchange_nod(grazmeso_d, partit)
+        call recom_exchange_nod(grazmeso_tot, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+        call recom_exchange_nod(grazmeso_n, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+        call recom_exchange_nod(grazmeso_d, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
         if (enable_coccos) then
-            call recom_exchange_nod(grazmeso_c, partit)
-            call recom_exchange_nod(grazmeso_p, partit)
+            call recom_exchange_nod(grazmeso_c, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(grazmeso_p, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
         endif
-        call recom_exchange_nod(grazmeso_det, partit)
+        call recom_exchange_nod(grazmeso_det, &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
         if (enable_3zoo2det) then
-            call recom_exchange_nod(grazmeso_mic, partit)
-            call recom_exchange_nod(grazmeso_det2, partit)
-            call recom_exchange_nod(grazmacro_tot, partit)
-            call recom_exchange_nod(grazmacro_n, partit)
-            call recom_exchange_nod(grazmacro_d, partit)
+            call recom_exchange_nod(grazmeso_mic, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(grazmeso_det2, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(grazmacro_tot, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(grazmacro_n, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(grazmacro_d, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
             if (enable_coccos) then
-                call recom_exchange_nod(grazmacro_c, partit)
-                call recom_exchange_nod(grazmacro_p, partit)
+                call recom_exchange_nod(grazmacro_c, &
+                                        partit%npes, partit%com_nod2D%sPEnum,   &
+                                        partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                        partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                        partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                        partit%com_nod2D%req, partit%com_nod2D%nreq)
+                call recom_exchange_nod(grazmacro_p, &
+                                        partit%npes, partit%com_nod2D%sPEnum,   &
+                                        partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                        partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                        partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                        partit%com_nod2D%req, partit%com_nod2D%nreq)
             endif
-            call recom_exchange_nod(grazmacro_mes, partit)
-            call recom_exchange_nod(grazmacro_det, partit)
-            call recom_exchange_nod(grazmacro_mic, partit)
-            call recom_exchange_nod(grazmacro_det2, partit)
-            call recom_exchange_nod(grazmicro_tot, partit)
-            call recom_exchange_nod(grazmicro_n, partit)
-            call recom_exchange_nod(grazmicro_d, partit)
+            call recom_exchange_nod(grazmacro_mes, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(grazmacro_det, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(grazmacro_mic, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(grazmacro_det2, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(grazmicro_tot, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(grazmicro_n, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+            call recom_exchange_nod(grazmicro_d, &
+                                    partit%npes, partit%com_nod2D%sPEnum,   &
+                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
             if (enable_coccos) then
-                call recom_exchange_nod(grazmicro_c, partit)
-                call recom_exchange_nod(grazmicro_p, partit)
+                call recom_exchange_nod(grazmicro_c, &
+                                        partit%npes, partit%com_nod2D%sPEnum,   &
+                                        partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                        partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                        partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                        partit%com_nod2D%req, partit%com_nod2D%nreq)
+                call recom_exchange_nod(grazmicro_p, &
+                                        partit%npes, partit%com_nod2D%sPEnum,   &
+                                        partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                        partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                        partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                        partit%com_nod2D%req, partit%com_nod2D%nreq)
             endif
         endif
     endif
 
     do n=1, benthos_num
-        call recom_exchange_nod(GlodecayBenthos(:,n), partit)
+        call recom_exchange_nod(GlodecayBenthos(:,n), &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
     end do
 
-    call recom_exchange_nod(GloHplus, partit)
-    call recom_exchange_nod(AtmFeInput, partit)
-    call recom_exchange_nod(AtmNInput, partit)
+    call recom_exchange_nod(GloHplus, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+    call recom_exchange_nod(AtmFeInput, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+    call recom_exchange_nod(AtmNInput, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
 
     call recom_exchange_nod(PAR3D, partit)
 

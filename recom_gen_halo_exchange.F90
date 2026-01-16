@@ -25,22 +25,25 @@ contains
 
 ! ========================================================================
 ! General version of the communication routine for 2D nodal fields
-subroutine recom_exchange_nod2D(nod_array2D, partit, luse_g2g)
-USE MOD_PARTIT
+subroutine recom_exchange_nod2D(nod_array2D, npes, sn, rn, MPI_COMM_FESOM, mype,            &
+                                s_mpitype_nod2D, r_mpitype_nod2D, sPE, rPE, requests, nreq, &
+                                luse_g2g)
+
 IMPLICIT NONE
-type(t_partit), intent(inout), target :: partit
-real(real64),   intent(inout)         :: nod_array2D(:)
-logical,        intent(in),optional   :: luse_g2g
 
- if (partit%npes > 1) then
-     
-    call recom_exchange_nod2D_begin(nod_array2D, partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq, luse_g2g)
+logical, intent(in),optional                  :: luse_g2g
+integer, intent(in)                           :: sn, rn, npes, MPI_COMM_FESOM, mype
+integer, intent(inout)                        :: nreq
+integer, intent(in),    dimension(:)          :: sPE, rPE 
+integer, intent(inout), dimension(:)          :: requests
+integer, intent(in),    dimension(:), pointer :: s_mpitype_nod2D, r_mpitype_nod2D
+real(real64),   intent(inout)                 :: nod_array2D(:)
 
-    call recom_exchange_nod_end(partit%npes, partit%com_nod2D%nreq, partit%com_nod2D%req)
+ if (npes > 1) then
+    call recom_exchange_nod2D_begin(nod_array2D, npes, sn, rn, MPI_COMM_FESOM, mype, &
+                                    s_mpitype_nod2D, r_mpitype_nod2D, sPE, rPE,      &
+                                    requests, nreq, luse_g2g)
+    call recom_exchange_nod_end(npes, nreq, requests)
  end if
 
 END SUBROUTINE recom_exchange_nod2D
