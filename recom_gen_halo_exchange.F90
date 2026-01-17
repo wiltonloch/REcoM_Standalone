@@ -94,21 +94,24 @@ END SUBROUTINE recom_exchange_nod2D_begin
 ! ========================================================================
 ! General version of the communication routine for 3D nodal fields
 ! stored in (vertical, horizontal) format
-subroutine recom_exchange_nod3D(nod_array3D, partit, luse_g2g)
-USE MOD_PARTIT
+subroutine recom_exchange_nod3D(nod_array3D, npes, sn, rn, MPI_COMM_FESOM, mype,    &
+                                s_mpitype_nod3D, r_mpitype_nod3D, sPE, rPE, requests, nreq, &
+                                luse_g2g)
 IMPLICIT NONE
-type(t_partit), intent(inout), target :: partit
-real(real64),   intent(inout)         :: nod_array3D(:,:)
-logical,        intent(in),optional   :: luse_g2g
 
-if (partit%npes > 1) then
-   call recom_exchange_nod3D_begin(nod_array3D, partit%npes, partit%com_nod2D%sPEnum,   &
-                                   partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                   partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
-                                   partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                   partit%com_nod2D%req, partit%com_nod2D%nreq, luse_g2g)
+logical, intent(in), optional                       :: luse_g2g
+integer, intent(in)                                 :: sn, rn, npes, MPI_COMM_FESOM, mype
+integer, intent(inout)                              :: nreq
+integer, intent(in),    dimension(:)                :: sPE, rPE 
+integer, intent(inout), dimension(:)                :: requests
+integer, intent(in),    dimension(:, :, :), pointer :: s_mpitype_nod3D, r_mpitype_nod3D
+real(real64), intent(inout)                         :: nod_array3D(:,:)
 
-   call recom_exchange_nod_end(partit%npes, partit%com_nod2D%nreq, partit%com_nod2D%req)
+if (npes > 1) then
+   call recom_exchange_nod3D_begin(nod_array3D, npes, sn, rn, MPI_COMM_FESOM, mype,       &
+                                   s_mpitype_nod3D, r_mpitype_nod3D, sPE, rPE,  requests, &
+                                   nreq, luse_g2g)
+   call recom_exchange_nod_end(npes, nreq, requests)
 endif
 
 END SUBROUTINE recom_exchange_nod3D
@@ -121,13 +124,13 @@ subroutine recom_exchange_nod3D_begin(nod_array3D, npes, sn, rn, MPI_COMM_FESOM,
                                       luse_g2g)
 IMPLICIT NONE
 
-logical, intent(in), optional                 :: luse_g2g
-integer, intent(in)                           :: sn, rn, npes, MPI_COMM_FESOM, mype
-integer, intent(inout)                        :: nreq
-integer, intent(in),    dimension(:)          :: sPE, rPE 
-integer, intent(inout), dimension(:)          :: requests
+logical, intent(in), optional                       :: luse_g2g
+integer, intent(in)                                 :: sn, rn, npes, MPI_COMM_FESOM, mype
+integer, intent(inout)                              :: nreq
+integer, intent(in),    dimension(:)                :: sPE, rPE 
+integer, intent(inout), dimension(:)                :: requests
 integer, intent(in),    dimension(:, :, :), pointer :: s_mpitype_nod3D, r_mpitype_nod3D
-real(real64), intent(inout)                   :: nod_array3D(:,:)
+real(real64), intent(inout)                         :: nod_array3D(:,:)
 
 integer                               :: n, MPIerr
 integer                               :: nz, nl1

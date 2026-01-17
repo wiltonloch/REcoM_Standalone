@@ -567,7 +567,12 @@ subroutine recom(partit, ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnod
 !************************** EXCHANGE NODAL INFORMATION *********************************
 
     do tr_num=num_tracers-bgc_num+1, num_tracers
-        call recom_exchange_nod(tracers_info%data_pointers(tr_num)%tracer_data(:,:), partit)
+        call recom_exchange_nod(tracers_info%data_pointers(tr_num)%tracer_data(:,:), &
+                                partit%npes, partit%com_nod2D%sPEnum,   &
+                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                                partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
+                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                                partit%com_nod2D%req, partit%com_nod2D%nreq)
     end do
 
     call recom_exchange_nod(GloPCO2surf, &
@@ -926,16 +931,61 @@ subroutine recom(partit, ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnod
                             partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
                             partit%com_nod2D%req, partit%com_nod2D%nreq)
 
-    call recom_exchange_nod(PAR3D, partit)
+    call recom_exchange_nod(PAR3D, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
 
-    call recom_exchange_nod(CO23D, partit)
-    call recom_exchange_nod(pH3D, partit)
-    call recom_exchange_nod(pCO23D, partit)
-    call recom_exchange_nod(HCO33D, partit)
-    call recom_exchange_nod(CO33D, partit)
-    call recom_exchange_nod(OmegaC3D, partit)
-    call recom_exchange_nod(kspc3D, partit)
-    call recom_exchange_nod(rhoSW3D, partit)
+    call recom_exchange_nod(CO23D, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+    call recom_exchange_nod(pH3D, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+    call recom_exchange_nod(pCO23D, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+    call recom_exchange_nod(HCO33D, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+    call recom_exchange_nod(CO33D, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+    call recom_exchange_nod(OmegaC3D, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+    call recom_exchange_nod(kspc3D, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+    call recom_exchange_nod(rhoSW3D, &
+                            partit%npes, partit%com_nod2D%sPEnum,   &
+                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
+                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
+                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
+                            partit%com_nod2D%req, partit%com_nod2D%nreq)
 
 end subroutine recom
 
