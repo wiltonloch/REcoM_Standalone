@@ -4,13 +4,13 @@
 ! Main REcoM 
 module recom_interface
     interface
-        subroutine recom(partit, ice_data_values, nl, ulevels_nod2D, & 
-                         nlevels_nod2D, hnode, z_3d_n, zbar_3d_n, geo_coord_nod2D,  &
-                         ocean_area, areasvol, myDim_nod2d, eDim_nod2D, mype,       &
-                         MPI_COMM_FESOM, tracers_info, num_tracers, tra_recom_sms)
-            use MOD_PARTIT
-            use MOD_PARSUP
+            subroutine recom(ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnode,           &
+                             z_3d_n, zbar_3d_n, geo_coord_nod2D, ocean_area, areasvol, myDim_nod2d,      &
+                             eDim_nod2D, mype, MPI_COMM_FESOM, tracers_info, num_tracers, tra_recom_sms, &
+                             npes, sn, rn, s_mpitype_nod2D, r_mpitype_nod2D, s_mpitype_nod3D, r_mpitype_nod3D, &
+                             sPE, rPE, requests, nreq)
             use recom_glovar
+            use o_param, only: wp
 
             integer, intent(in)                              :: nl, myDim_nod2d, eDim_nod2D
             integer, intent(in)                              :: mype, MPI_COMM_FESOM, num_tracers
@@ -21,7 +21,13 @@ module recom_interface
             real(kind=WP), intent(in), dimension(:, :)       :: geo_coord_nod2D, areasvol
             real(kind=WP), intent(inout), dimension(:, :, :) :: tra_recom_sms
 
-            type(t_partit), intent(inout), target :: partit
+            integer, intent(in)                                 :: sn, rn, npes
+            integer, intent(inout)                              :: nreq
+            integer, intent(in),    dimension(:)                :: sPE, rPE 
+            integer, intent(inout), dimension(:)                :: requests
+            integer, intent(in),    dimension(:),       pointer :: s_mpitype_nod2D, r_mpitype_nod2D
+            integer, intent(in),    dimension(:, :, :), pointer :: s_mpitype_nod3D, r_mpitype_nod3D
+
             type(tracers_info_type), intent(in) :: tracers_info
         end subroutine
     end interface
@@ -42,10 +48,11 @@ module bio_fluxes_interface
     end interface
 end module
 
-subroutine recom(partit, ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnode, &
-                 z_3d_n, zbar_3d_n, geo_coord_nod2D, ocean_area, areasvol, myDim_nod2d,           &
-                 eDim_nod2D, mype, MPI_COMM_FESOM, tracers_info, num_tracers, tra_recom_sms)
-    use MOD_PARTIT, only: t_partit
+subroutine recom(ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnode,           &
+                 z_3d_n, zbar_3d_n, geo_coord_nod2D, ocean_area, areasvol, myDim_nod2d,      &
+                 eDim_nod2D, mype, MPI_COMM_FESOM, tracers_info, num_tracers, tra_recom_sms, &
+                 npes, sn, rn, s_mpitype_nod2D, r_mpitype_nod2D, s_mpitype_nod3D, r_mpitype_nod3D, &
+                 sPE, rPE, requests, nreq)
 
     use o_PARAM, only: wp, rad, kappa
     use g_clock, only: dt, daynew, month, mstep, ndpyr, yearold
@@ -73,7 +80,14 @@ subroutine recom(partit, ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnod
     real(kind=WP), intent(in), dimension(:, :)       :: geo_coord_nod2D, areasvol
     real(kind=WP), intent(inout), dimension(:, :, :) :: tra_recom_sms
 
-    type(t_partit), intent(inout), target :: partit
+    ! These should all go into a dedicated REcoM type
+    integer, intent(in)                                 :: sn, rn, npes
+    integer, intent(inout)                              :: nreq
+    integer, intent(in),    dimension(:)                :: sPE, rPE 
+    integer, intent(inout), dimension(:)                :: requests
+    integer, intent(in),    dimension(:),       pointer :: s_mpitype_nod2D, r_mpitype_nod2D
+    integer, intent(in),    dimension(:, :, :), pointer :: s_mpitype_nod3D, r_mpitype_nod3D
+
     type(tracers_info_type), intent(in) :: tracers_info
 
     !___________________________________________________________________________
@@ -568,424 +582,232 @@ subroutine recom(partit, ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnod
 
     do tr_num=num_tracers-bgc_num+1, num_tracers
         call recom_exchange_nod(tracers_info%data_pointers(tr_num)%tracer_data(:,:), &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod3D, &
+                                r_mpitype_nod3D, sPE, rPE, requests, nreq)
     end do
 
     call recom_exchange_nod(GloPCO2surf, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                            r_mpitype_nod2D, sPE, rPE, requests, nreq)
 
     call recom_exchange_nod(GlodPCO2surf, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                            r_mpitype_nod2D, sPE, rPE, requests, nreq)
 
     call recom_exchange_nod(GloCO2flux, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                            r_mpitype_nod2D, sPE, rPE, requests, nreq)
 
     call recom_exchange_nod(GloCO2flux_seaicemask, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                            r_mpitype_nod2D, sPE, rPE, requests, nreq)
 
     call recom_exchange_nod(GloO2flux_seaicemask, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                            r_mpitype_nod2D, sPE, rPE, requests, nreq)
     if (ciso) then
         call recom_exchange_nod(GloPCO2surf_13, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
 
         call recom_exchange_nod(GloCO2flux_13, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
 
         call recom_exchange_nod(GloCO2flux_seaicemask_13, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
         if (ciso_14) then
             call recom_exchange_nod(GloPCO2surf_14, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
 
             call recom_exchange_nod(GloCO2flux_14, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
 
             call recom_exchange_nod(GloCO2flux_seaicemask_14, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
         end if 
     end if
     do n=1, benthos_num
         call recom_exchange_nod(Benthos(:,n), &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
     end do
 
     if (Diags) then
         call recom_exchange_nod(NPPn, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
         call recom_exchange_nod(NPPd, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
         call recom_exchange_nod(GPPn, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
         call recom_exchange_nod(GPPd, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
         call recom_exchange_nod(NNAn, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
         call recom_exchange_nod(NNAd, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
         call recom_exchange_nod(Chldegn, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
         call recom_exchange_nod(Chldegd, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
         if (enable_coccos) then
             call recom_exchange_nod(NPPc, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(GPPc, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(NNAc, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(Chldegc, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(NPPp, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(GPPp, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(NNAp, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(Chldegp, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
         endif
         call recom_exchange_nod(grazmeso_tot, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
         call recom_exchange_nod(grazmeso_n, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
         call recom_exchange_nod(grazmeso_d, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
         if (enable_coccos) then
             call recom_exchange_nod(grazmeso_c, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(grazmeso_p, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
         endif
         call recom_exchange_nod(grazmeso_det, &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
         if (enable_3zoo2det) then
             call recom_exchange_nod(grazmeso_mic, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(grazmeso_det2, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(grazmacro_tot, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(grazmacro_n, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(grazmacro_d, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             if (enable_coccos) then
                 call recom_exchange_nod(grazmacro_c, &
-                                        partit%npes, partit%com_nod2D%sPEnum,   &
-                                        partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                        partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                        partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                        partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                        npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                        r_mpitype_nod2D, sPE, rPE, requests, nreq)
                 call recom_exchange_nod(grazmacro_p, &
-                                        partit%npes, partit%com_nod2D%sPEnum,   &
-                                        partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                        partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                        partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                        partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                        npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                        r_mpitype_nod2D, sPE, rPE, requests, nreq)
             endif
             call recom_exchange_nod(grazmacro_mes, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(grazmacro_det, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(grazmacro_mic, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(grazmacro_det2, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(grazmicro_tot, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(grazmicro_n, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             call recom_exchange_nod(grazmicro_d, &
-                                    partit%npes, partit%com_nod2D%sPEnum,   &
-                                    partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                    partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                    partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                    partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                    npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                    r_mpitype_nod2D, sPE, rPE, requests, nreq)
             if (enable_coccos) then
                 call recom_exchange_nod(grazmicro_c, &
-                                        partit%npes, partit%com_nod2D%sPEnum,   &
-                                        partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                        partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                        partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                        partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                        npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                        r_mpitype_nod2D, sPE, rPE, requests, nreq)
                 call recom_exchange_nod(grazmicro_p, &
-                                        partit%npes, partit%com_nod2D%sPEnum,   &
-                                        partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                        partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                        partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                        partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                        npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                        r_mpitype_nod2D, sPE, rPE, requests, nreq)
             endif
         endif
     endif
 
     do n=1, benthos_num
         call recom_exchange_nod(GlodecayBenthos(:,n), &
-                                partit%npes, partit%com_nod2D%sPEnum,   &
-                                partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                                partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                                partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                                partit%com_nod2D%req, partit%com_nod2D%nreq)
+                                npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                                r_mpitype_nod2D, sPE, rPE, requests, nreq)
     end do
 
     call recom_exchange_nod(GloHplus, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                            r_mpitype_nod2D, sPE, rPE, requests, nreq)
     call recom_exchange_nod(AtmFeInput, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                            r_mpitype_nod2D, sPE, rPE, requests, nreq)
     call recom_exchange_nod(AtmNInput, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod2D, partit%r_mpitype_nod2D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                            r_mpitype_nod2D, sPE, rPE, requests, nreq)
 
     call recom_exchange_nod(PAR3D, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod3D, &
+                            r_mpitype_nod3D, sPE, rPE, requests, nreq)
 
     call recom_exchange_nod(CO23D, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod3D, &
+                            r_mpitype_nod3D, sPE, rPE, requests, nreq)
     call recom_exchange_nod(pH3D, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod3D, &
+                            r_mpitype_nod3D, sPE, rPE, requests, nreq)
     call recom_exchange_nod(pCO23D, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod3D, &
+                            r_mpitype_nod3D, sPE, rPE, requests, nreq)
     call recom_exchange_nod(HCO33D, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod3D, &
+                            r_mpitype_nod3D, sPE, rPE, requests, nreq)
     call recom_exchange_nod(CO33D, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod3D, &
+                            r_mpitype_nod3D, sPE, rPE, requests, nreq)
     call recom_exchange_nod(OmegaC3D, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod3D, &
+                            r_mpitype_nod3D, sPE, rPE, requests, nreq)
     call recom_exchange_nod(kspc3D, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod3D, &
+                            r_mpitype_nod3D, sPE, rPE, requests, nreq)
     call recom_exchange_nod(rhoSW3D, &
-                            partit%npes, partit%com_nod2D%sPEnum,   &
-                            partit%com_nod2D%rPEnum, partit%MPI_COMM_FESOM, partit%mype, &
-                            partit%s_mpitype_nod3D, partit%r_mpitype_nod3D,              &
-                            partit%com_nod2D%sPE, partit%com_nod2D%rPE,                  &
-                            partit%com_nod2D%req, partit%com_nod2D%nreq)
+                            npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod3D, &
+                            r_mpitype_nod3D, sPE, rPE, requests, nreq)
 
 end subroutine recom
 
