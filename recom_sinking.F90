@@ -114,7 +114,7 @@ subroutine ver_sinking_recom_benthos(tr_num, partit, nl, ulevels_nod2D, nlevels_
 
     use g_clock, only: dt
     use o_PARAM, only: wp
-    use g_comm_auto, only: exchange_nod
+    use recom_g_comm_auto, only: recom_exchange_nod
 
     use recom_declarations
     use recom_locvar
@@ -327,15 +327,30 @@ subroutine ver_sinking_recom_benthos(tr_num, partit, nl, ulevels_nod2D, nlevels_
         do n=1, bottflx_num
 !           SinkFlx(:,n) = Sinkflx(:,n)/dt
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-           call exchange_nod(SinkFlx_tr(:,n,tr_num), partit)
+           call recom_exchange_nod(SinkFlx_tr(:,n,tr_num), &
+                                   partit%npes, partit%com_nod2d%spenum, &
+                                   partit%com_nod2d%rpenum,  &
+                                   partit%MPI_COMM_FESOM, partit%mype, partit%s_mpitype_nod2D, &
+                                   partit%r_mpitype_nod2D, partit%com_nod2d%sPE, partit%com_nod2d%rPE, partit%com_nod2d%req, &
+                                   partit%com_nod2d%nreq)
         end do
    end if ! use_MEDUSA
 
    do n=1, benthos_num
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-      call exchange_nod(Benthos_tr(:,n,tr_num), partit)
+      call recom_exchange_nod(Benthos_tr(:,n,tr_num), &
+                        partit%npes, partit%com_nod2d%spenum, &
+                        partit%com_nod2d%rpenum,  &
+                        partit%MPI_COMM_FESOM, partit%mype, partit%s_mpitype_nod2D, &
+                        partit%r_mpitype_nod2D, partit%com_nod2d%sPE, partit%com_nod2d%rPE, partit%com_nod2d%req, &
+                        partit%com_nod2d%nreq)
 
-      call exchange_nod(Benthos(:,n), partit)
+      call recom_exchange_nod(Benthos(:,n), &
+                        partit%npes, partit%com_nod2d%spenum, &
+                        partit%com_nod2d%rpenum,  &
+                        partit%MPI_COMM_FESOM, partit%mype, partit%s_mpitype_nod2D, &
+                        partit%r_mpitype_nod2D, partit%com_nod2d%sPE, partit%com_nod2d%rPE, partit%com_nod2d%req, &
+                        partit%com_nod2d%nreq)
    end do
 
 end subroutine ver_sinking_recom_benthos
