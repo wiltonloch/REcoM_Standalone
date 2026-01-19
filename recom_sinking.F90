@@ -36,20 +36,29 @@ end module
 
 module ver_sinking_recom_benthos_interface
   interface
-    subroutine ver_sinking_recom_benthos(tr_num, partit, nl, ulevels_nod2D, nlevels_nod2D,         &
-                                         zbar_3d_n, nod_in_elem2D_num, nod_in_elem2D, nlevels,     &
-                                         area, tracer_id, tracer_data_values, myDim_nod2d, str_bf)
-        USE MOD_PARTIT, only: t_partit
+        subroutine ver_sinking_recom_benthos(tr_num, nl, ulevels_nod2D, nlevels_nod2D, zbar_3d_n, &
+                                             nod_in_elem2D_num, nod_in_elem2D, nlevels, area, tracer_id,  &
+                                             tracer_data_values, myDim_nod2d, str_bf, mype,               &
+                                             MPI_COMM_FESOM, npes, sn, rn, s_mpitype_nod2D,               &
+                                             r_mpitype_nod2D, s_mpitype_nod3D,           &
+                                             r_mpitype_nod3D, sPE, rPE, requests, nreq)
         use o_PARAM, only: wp
 
         integer,       intent(in)                    :: tr_num, nl, tracer_id, myDim_nod2D
+        integer,       intent(in)                    :: mype, MPI_COMM_FESOM
         integer,       intent(in),    dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
         integer,       intent(in),    dimension(:)   :: nod_in_elem2D_num, nlevels
         integer,       intent(in),    dimension(:,:) :: nod_in_elem2D
         real(kind=WP), intent(in),    dimension(:,:) :: zbar_3d_n, area, tracer_data_values
         real(kind=WP), intent(inout), dimension(:,:) :: str_bf
 
-        type(t_partit), intent(inout), target :: partit
+        ! These should all go into a dedicated REcoM type
+        integer, intent(in)                                 :: sn, rn, npes
+        integer, intent(inout)                              :: nreq
+        integer, intent(in),    dimension(:)                :: sPE, rPE 
+        integer, intent(inout), dimension(:)                :: requests
+        integer, intent(in),    dimension(:),       pointer :: s_mpitype_nod2D, r_mpitype_nod2D
+        integer, intent(in),    dimension(:, :, :), pointer :: s_mpitype_nod3D, r_mpitype_nod3D
     end subroutine
   end interface
 end module
@@ -106,11 +115,12 @@ end module
 ! second detritus has a different sinking speed than the first
 ! define recom_det2_tracer_id to make it consistent???
 !===============================================================================
-subroutine ver_sinking_recom_benthos(tr_num, partit, nl, ulevels_nod2D, nlevels_nod2D, zbar_3d_n, &
+subroutine ver_sinking_recom_benthos(tr_num, nl, ulevels_nod2D, nlevels_nod2D, zbar_3d_n, &
                                      nod_in_elem2D_num, nod_in_elem2D, nlevels, area, tracer_id,  &
-                                     tracer_data_values, myDim_nod2d, str_bf)
-
-    use MOD_PARTIT, only: t_partit
+                                     tracer_data_values, myDim_nod2d, str_bf, mype,               &
+                                     MPI_COMM_FESOM, npes, sn, rn, s_mpitype_nod2D,               &
+                                     r_mpitype_nod2D, s_mpitype_nod3D,           &
+                                     r_mpitype_nod3D, sPE, rPE, requests, nreq)
 
     use g_clock, only: dt
     use o_PARAM, only: wp
@@ -125,13 +135,20 @@ subroutine ver_sinking_recom_benthos(tr_num, partit, nl, ulevels_nod2D, nlevels_
     implicit none
 
     integer,       intent(in)                    :: tr_num, nl, tracer_id, myDim_nod2D
+    integer,       intent(in)                    :: mype, MPI_COMM_FESOM
     integer,       intent(in),    dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
     integer,       intent(in),    dimension(:)   :: nod_in_elem2D_num, nlevels
     integer,       intent(in),    dimension(:,:) :: nod_in_elem2D
     real(kind=WP), intent(in),    dimension(:,:) :: zbar_3d_n, area, tracer_data_values
     real(kind=WP), intent(inout), dimension(:,:) :: str_bf
 
-    type(t_partit), intent(inout), target :: partit
+    ! These should all go into a dedicated REcoM type
+    integer, intent(in)                                 :: sn, rn, npes
+    integer, intent(inout)                              :: nreq
+    integer, intent(in),    dimension(:)                :: sPE, rPE 
+    integer, intent(inout), dimension(:)                :: requests
+    integer, intent(in),    dimension(:),       pointer :: s_mpitype_nod2D, r_mpitype_nod2D
+    integer, intent(in),    dimension(:, :, :), pointer :: s_mpitype_nod3D, r_mpitype_nod3D
 
     integer                   :: elem,k
     integer                   :: nl1,ul1,nz,n,nzmin, nzmax, net
@@ -327,30 +344,19 @@ subroutine ver_sinking_recom_benthos(tr_num, partit, nl, ulevels_nod2D, nlevels_
         do n=1, bottflx_num
 !           SinkFlx(:,n) = Sinkflx(:,n)/dt
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-           call recom_exchange_nod(SinkFlx_tr(:,n,tr_num), &
-                                   partit%npes, partit%com_nod2d%spenum, &
-                                   partit%com_nod2d%rpenum,  &
-                                   partit%MPI_COMM_FESOM, partit%mype, partit%s_mpitype_nod2D, &
-                                   partit%r_mpitype_nod2D, partit%com_nod2d%sPE, partit%com_nod2d%rPE, partit%com_nod2d%req, &
-                                   partit%com_nod2d%nreq)
+           call recom_exchange_nod(SinkFlx_tr(:,n,tr_num), npes, sn, rn, MPI_COMM_FESOM, mype, &
+                                   s_mpitype_nod2D, r_mpitype_nod2D, sPE, rPE, requests, nreq)
         end do
    end if ! use_MEDUSA
 
    do n=1, benthos_num
 ! kh 25.03.22 buffer sums per tracer index to avoid non bit identical results regarding global sums when running the tracer loop in parallel
-      call recom_exchange_nod(Benthos_tr(:,n,tr_num), &
-                        partit%npes, partit%com_nod2d%spenum, &
-                        partit%com_nod2d%rpenum,  &
-                        partit%MPI_COMM_FESOM, partit%mype, partit%s_mpitype_nod2D, &
-                        partit%r_mpitype_nod2D, partit%com_nod2d%sPE, partit%com_nod2d%rPE, partit%com_nod2d%req, &
-                        partit%com_nod2d%nreq)
+      call recom_exchange_nod(Benthos_tr(:,n,tr_num), npes, sn, rn, MPI_COMM_FESOM,       &
+                              mype, s_mpitype_nod2D, r_mpitype_nod2D, sPE, rPE, requests, &
+                              nreq)
 
-      call recom_exchange_nod(Benthos(:,n), &
-                        partit%npes, partit%com_nod2d%spenum, &
-                        partit%com_nod2d%rpenum,  &
-                        partit%MPI_COMM_FESOM, partit%mype, partit%s_mpitype_nod2D, &
-                        partit%r_mpitype_nod2D, partit%com_nod2d%sPE, partit%com_nod2d%rPE, partit%com_nod2d%req, &
-                        partit%com_nod2d%nreq)
+      call recom_exchange_nod(Benthos(:,n), npes, sn, rn, MPI_COMM_FESOM, mype, s_mpitype_nod2D, &
+                              r_mpitype_nod2D, sPE, rPE, requests, nreq)
    end do
 
 end subroutine ver_sinking_recom_benthos
