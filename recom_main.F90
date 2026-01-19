@@ -8,15 +8,19 @@ module recom_interface
                              z_3d_n, zbar_3d_n, geo_coord_nod2D, ocean_area, areasvol, myDim_nod2d,      &
                              eDim_nod2D, mype, MPI_COMM_FESOM, tracers_info, num_tracers, tra_recom_sms, &
                              npes, sn, rn, s_mpitype_nod2D, r_mpitype_nod2D, s_mpitype_nod3D, r_mpitype_nod3D, &
-                             sPE, rPE, requests, nreq)
+                             sPE, rPE, requests, nreq, dt, daynew, month, mstep, ndpyr, yearold, rad, kappa, &
+                             press_air, u_wind, v_wind, shortwave)
             use recom_glovar
             use o_param, only: wp
 
             integer, intent(in)                              :: nl, myDim_nod2d, eDim_nod2D
             integer, intent(in)                              :: mype, MPI_COMM_FESOM, num_tracers
+            integer, intent(in)                              :: mstep, daynew, yearold, month, ndpyr
             integer, intent(in), dimension(:)                :: ulevels_nod2D, nlevels_nod2D 
-            real(kind=WP), intent(in)                        :: ocean_area
-            real(kind=WP), intent(in), dimension(:)          :: ice_data_values
+            real(kind=WP), intent(inout)                     :: dt, kappa
+            real(kind=WP), intent(in)                        :: ocean_area, rad
+            real(kind=WP), intent(in), dimension(:)          :: ice_data_values, press_air
+            real(kind=WP), intent(in), dimension(:)          :: u_wind, v_wind, shortwave
             real(kind=WP), intent(in), dimension(:, :)       :: hnode, z_3d_n, zbar_3d_n
             real(kind=WP), intent(in), dimension(:, :)       :: geo_coord_nod2D, areasvol
             real(kind=WP), intent(inout), dimension(:, :, :) :: tra_recom_sms
@@ -52,11 +56,10 @@ subroutine recom(ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnode,      
                  z_3d_n, zbar_3d_n, geo_coord_nod2D, ocean_area, areasvol, myDim_nod2d,      &
                  eDim_nod2D, mype, MPI_COMM_FESOM, tracers_info, num_tracers, tra_recom_sms, &
                  npes, sn, rn, s_mpitype_nod2D, r_mpitype_nod2D, s_mpitype_nod3D, r_mpitype_nod3D, &
-                 sPE, rPE, requests, nreq)
+                 sPE, rPE, requests, nreq, dt, daynew, month, mstep, ndpyr, yearold, rad, kappa, &
+                 press_air, u_wind, v_wind, shortwave)
 
-    use o_PARAM, only: wp, rad, kappa
-    use g_clock, only: dt, daynew, month, mstep, ndpyr, yearold
-    use g_forcing_arrays, only: press_air, u_wind, v_wind, shortwave
+    use o_PARAM, only: wp
     use recom_g_comm_auto, only: recom_exchange_nod
 
     use recom_declarations
@@ -73,9 +76,12 @@ subroutine recom(ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnode,      
 
     integer, intent(in)                              :: nl, myDim_nod2d, eDim_nod2D
     integer, intent(in)                              :: mype, MPI_COMM_FESOM, num_tracers
+    integer, intent(in)                              :: mstep, daynew, yearold, month, ndpyr
     integer, intent(in), dimension(:)                :: ulevels_nod2D, nlevels_nod2D 
-    real(kind=WP), intent(in)                        :: ocean_area
-    real(kind=WP), intent(in), dimension(:)          :: ice_data_values
+    real(kind=WP), intent(inout)                     :: dt, kappa
+    real(kind=WP), intent(in)                        :: ocean_area, rad
+    real(kind=WP), intent(in), dimension(:)          :: ice_data_values, press_air
+    real(kind=WP), intent(in), dimension(:)          :: u_wind, v_wind, shortwave
     real(kind=WP), intent(in), dimension(:, :)       :: hnode, z_3d_n, zbar_3d_n
     real(kind=WP), intent(in), dimension(:, :)       :: geo_coord_nod2D, areasvol
     real(kind=WP), intent(inout), dimension(:, :, :) :: tra_recom_sms
@@ -148,7 +154,7 @@ subroutine recom(ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnode,      
 ! Prognostic atmospheric isoCO2
     call recom_atbox(MPI_COMM_FESOM, myDim_nod2D, &
                      eDim_nod2D, ulevels_nod2D,  &
-                     areasvol)
+                     areasvol, dt)
 !   optional I/O of isoCO2 and inferred cosmogenic 14C production; this may cost some CPU time
     if (ciso .and. ciso_14) then
       call annual_event(do_update)
