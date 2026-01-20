@@ -34,7 +34,7 @@ IMPLICIT NONE
 logical, intent(in),optional                  :: luse_g2g
 integer, intent(in)                           :: sn, rn, npes, MPI_COMM_FESOM, mype
 integer, intent(inout)                        :: nreq
-integer, intent(in),    dimension(:)          :: sPE, rPE 
+integer, intent(in),    dimension(:)          :: sPE, rPE
 integer, intent(inout), dimension(:)          :: requests
 integer, intent(in),    dimension(:), pointer :: s_mpitype_nod2D, r_mpitype_nod2D
 real(real64),   intent(inout)                 :: nod_array2D(:)
@@ -58,7 +58,7 @@ IMPLICIT NONE
 logical, intent(in), optional                 :: luse_g2g
 integer, intent(in)                           :: sn, rn, npes, MPI_COMM_FESOM, mype
 integer, intent(inout)                        :: nreq
-integer, intent(in),    dimension(:)          :: sPE, rPE 
+integer, intent(in),    dimension(:)          :: sPE, rPE
 integer, intent(inout), dimension(:)          :: requests
 integer, intent(in),    dimension(:), pointer :: s_mpitype_nod2D, r_mpitype_nod2D
 real(real64), intent(inout)                   :: nod_array2D(:)
@@ -102,7 +102,7 @@ IMPLICIT NONE
 logical, intent(in), optional                       :: luse_g2g
 integer, intent(in)                                 :: sn, rn, npes, MPI_COMM_FESOM, mype
 integer, intent(inout)                              :: nreq
-integer, intent(in),    dimension(:)                :: sPE, rPE 
+integer, intent(in),    dimension(:)                :: sPE, rPE
 integer, intent(inout), dimension(:)                :: requests
 integer, intent(in),    dimension(:, :, :), pointer :: s_mpitype_nod3D, r_mpitype_nod3D
 real(real64), intent(inout)                         :: nod_array3D(:,:)
@@ -127,7 +127,7 @@ IMPLICIT NONE
 logical, intent(in), optional                       :: luse_g2g
 integer, intent(in)                                 :: sn, rn, npes, MPI_COMM_FESOM, mype
 integer, intent(inout)                              :: nreq
-integer, intent(in),    dimension(:)                :: sPE, rPE 
+integer, intent(in),    dimension(:)                :: sPE, rPE
 integer, intent(inout), dimension(:)                :: requests
 integer, intent(in),    dimension(:, :, :), pointer :: s_mpitype_nod3D, r_mpitype_nod3D
 real(real64), intent(inout)                         :: nod_array3D(:,:)

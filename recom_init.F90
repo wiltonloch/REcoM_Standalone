@@ -1,18 +1,18 @@
 ! ------------
 ! 23.03.2023
-! OG   
+! OG
 !===============================================================================
 ! allocate & initialise arrays for REcoM
 module recom_init_interface
     interface
         subroutine recom_init(nl, ulevels_nod2D, nlevels_nod2D, geo_coord_nod2D, Z_3d_n,   &
-                              myDim_nod2d, eDim_nod2D, mype, MPI_COMM_FESOM, myDim_elem2D, & 
+                              myDim_nod2d, eDim_nod2D, mype, MPI_COMM_FESOM, myDim_elem2D, &
                               eDim_elem2D, tracers_info, num_tracers, rad)
         use recom_glovar, only: tracers_info_type
         use recom_declarations, only: wp
         integer,        intent(in)                  :: nl, mydim_nod2d, edim_nod2d, mype, num_tracers
         integer,        intent(in)                  :: mpi_comm_fesom, mydim_elem2d, edim_elem2d
-        integer,        intent(in), dimension(:)    :: ulevels_nod2d, nlevels_nod2d 
+        integer,        intent(in), dimension(:)    :: ulevels_nod2d, nlevels_nod2d
         real(kind=WP), intent(in)                  :: rad
         real(kind=wp),  intent(in), dimension(:, :) :: geo_coord_nod2d, z_3d_n
         type(tracers_info_type), intent(in) :: tracers_info
@@ -23,7 +23,7 @@ end module
 !
 !_______________________________________________________________________________
 subroutine recom_init(nl, ulevels_nod2D, nlevels_nod2D, geo_coord_nod2D, Z_3d_n,   &
-                      myDim_nod2d, eDim_nod2D, mype, MPI_COMM_FESOM, myDim_elem2D, & 
+                      myDim_nod2d, eDim_nod2D, mype, MPI_COMM_FESOM, myDim_elem2D, &
                       eDim_elem2D, tracers_info, num_tracers, rad)
 
     use mpi
@@ -40,12 +40,12 @@ subroutine recom_init(nl, ulevels_nod2D, nlevels_nod2D, geo_coord_nod2D, Z_3d_n,
     integer,        intent(in)                  :: nl, mydim_nod2d, edim_nod2d, mype, num_tracers
     integer,        intent(in)                  :: mpi_comm_fesom, mydim_elem2d, edim_elem2d
     real(kind=WP), intent(in)                  :: rad
-    integer,        intent(in), dimension(:)    :: ulevels_nod2d, nlevels_nod2d 
+    integer,        intent(in), dimension(:)    :: ulevels_nod2d, nlevels_nod2d
     real(kind=wp),  intent(in), dimension(:, :) :: geo_coord_nod2d, z_3d_n
     type(tracers_info_type), intent(in) :: tracers_info
 
     !___________________________________________________________________________
-    ! pointer on necessary derived types 
+    ! pointer on necessary derived types
     integer                                 :: n, k, row, nzmin, nzmax, i, id
     integer                                 :: elem_size, node_size
     integer                                 :: MPIerr
@@ -354,7 +354,7 @@ subroutine recom_init(nl, ulevels_nod2D, nlevels_nod2D, geo_coord_nod2D, Z_3d_n,
     allocate(OmegaC3D     ( nl-1, node_size ))
     allocate(kspc3D       ( nl-1, node_size ))
     allocate(rhoSW3D      ( nl-1, node_size ))
-  
+
     CO23D(:,:)          = 0.d0
     pH3D(:,:)           = 0.d0
     pCO23D(:,:)         = 0.d0
@@ -624,7 +624,7 @@ subroutine recom_init(nl, ulevels_nod2D, nlevels_nod2D, geo_coord_nod2D, Z_3d_n,
 
     !< Mask hydrothermal vent in Eastern Equatorial Pacific GO
     do row=1, myDim_nod2D+eDim_nod2D
-        !if (ulevels_nod2D(row)>1) cycle 
+        !if (ulevels_nod2D(row)>1) cycle
         nzmin = ulevels_nod2D(row)
         nzmax = nlevels_nod2D(row)-1
         do k=nzmin, nzmax
@@ -632,7 +632,7 @@ subroutine recom_init(nl, ulevels_nod2D, nlevels_nod2D, geo_coord_nod2D, Z_3d_n,
             if (((geo_coord_nod2D(2,row) > -12.5*rad) .and. (geo_coord_nod2D(2,row) < 9.5*rad))&
                 .and.((geo_coord_nod2D(1,row)> -106.0*rad) .and. (geo_coord_nod2D(1,row) < -72.0*rad))) then
                 if (abs(Z_3d_n(k,row))<2000.0_WP) cycle
-                tracers_info%data_pointers(21)%tracer_data(k,row) = min(0.3, tracers_info%data_pointers(21)%tracer_data(k,row)) ! OG todo: try 0.6 
+                tracers_info%data_pointers(21)%tracer_data(k,row) = min(0.3, tracers_info%data_pointers(21)%tracer_data(k,row)) ! OG todo: try 0.6
             end if
         end do
     end do
@@ -709,4 +709,3 @@ subroutine recom_init(nl, ulevels_nod2D, nlevels_nod2D, geo_coord_nod2D, Z_3d_n,
             is_coccos=0.0_WP
         endif
     end subroutine recom_init
-
