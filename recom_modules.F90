@@ -1109,6 +1109,9 @@ Module REcoM_declarations
   implicit none
   save
 
+  integer, parameter            :: WP=8        ! Working precision
+  real(kind=WP), parameter      :: pi=3.14159265358979
+
   Integer       :: save_count_recom
   Real(kind=8)  :: tiny_N                 ! Min PhyN
   Real(kind=8)  :: tiny_N_d               ! Min DiaN
