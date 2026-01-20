@@ -11,7 +11,7 @@ module recom_interface
                              sPE, rPE, requests, nreq, dt, daynew, month, mstep, ndpyr, yearold, rad, kappa, &
                              press_air, u_wind, v_wind, shortwave)
             use recom_glovar
-            use o_param, only: wp
+            use recom_declarations, only: wp
 
             integer, intent(in)                              :: nl, myDim_nod2d, eDim_nod2D
             integer, intent(in)                              :: mype, MPI_COMM_FESOM, num_tracers
@@ -40,7 +40,7 @@ end module
 module bio_fluxes_interface
     interface
         subroutine bio_fluxes(alkalinity, MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D, ocean_area, ulevels_nod2D, areasvol)
-            use g_config, only: wp
+            use recom_declarations, only: wp
 
             integer, intent(in)               :: MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D
             integer, intent(in), dimension(:) :: ulevels_nod2D
@@ -59,7 +59,6 @@ subroutine recom(ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnode,      
                  sPE, rPE, requests, nreq, dt, daynew, month, mstep, ndpyr, yearold, rad, kappa, &
                  press_air, u_wind, v_wind, shortwave)
 
-    use o_PARAM, only: wp
     use recom_g_comm_auto, only: recom_exchange_nod
 
     use recom_declarations
@@ -826,7 +825,6 @@ subroutine bio_fluxes(alkalinity, MPI_COMM_FESOM, myDim_nod2D, eDim_nod2D, ocean
     use recom_glovar
     use recom_config
     use recom_extra, only: integrate_nod_2d_recom
-    use g_config, only: wp
 
     implicit none
 

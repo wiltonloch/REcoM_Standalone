@@ -12,7 +12,6 @@ module recom_sms_module
             use recom_config
             use recoM_ciso
             use recom_extra
-            use g_config, only: wp
             use mvars, only: vars_sprac
 
             implicit none
@@ -59,7 +58,6 @@ subroutine REcoM_sms(n, Nn, state, thick, SurfSR, sms, Temp, Sali_depth, CO2_wat
     use recom_config
     use recoM_ciso
     use recom_extra
-    use g_config, only: wp
     use mvars, only: vars_sprac
 
     implicit none

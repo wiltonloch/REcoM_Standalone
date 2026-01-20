@@ -3,7 +3,7 @@ module diff_ver_recom_expl_interface
 subroutine diff_ver_recom_expl(nl, ulevels_nod2D, nlevels_nod2D, nod_in_elem2D_num, nod_in_elem2D, &
                                nlevels, area, areasvol, hnode_new, tracer_id, myDim_nod2d,         &
                                eDim_nod2D, mype, MPI_COMM_FESOM, dtr_bf, dt)
-        use o_param, only: wp
+        use recom_declarations, only: wp
         integer,       intent(in)                    :: myDim_nod2d, eDim_nod2D, mype, MPI_COMM_FESOM
         integer,       intent(in)                    :: nl, tracer_id
         integer,       intent(in),    dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
@@ -22,7 +22,8 @@ module ver_sinking_recom_interface
                                      nod_in_elem2D_num, nod_in_elem2D, nlevels, area, areasvol,   &
                                      hnode, hnode_new, tracer_id, tracer_data_values,             &
                                      myDim_nod2d, vert_sink, dt)
-        use o_param, only: wp
+        use recom_declarations, only: wp
+
         integer,       intent(in)                    :: tr_num, myDim_nod2d
         integer,       intent(in)                    :: nl, tracer_id
         integer,       intent(in),    dimension(:)   :: ulevels_nod2D, nlevels_nod2D 
@@ -44,7 +45,7 @@ module ver_sinking_recom_benthos_interface
                                              MPI_COMM_FESOM, npes, sn, rn, s_mpitype_nod2D,               &
                                              r_mpitype_nod2D, s_mpitype_nod3D,           &
                                              r_mpitype_nod3D, sPE, rPE, requests, nreq, dt)
-        use o_PARAM, only: wp
+        use recom_declarations, only: wp
 
         integer,       intent(in)                    :: tr_num, nl, tracer_id, myDim_nod2D
         integer,       intent(in)                    :: mype, MPI_COMM_FESOM
@@ -71,7 +72,7 @@ module ballast_interface
     subroutine ballast(myDim_nod2d, ulevels_nod2D, nlevels_nod2D, &
                          geo_coord_nod2D, Z_3d_n, tracer_data_values_1, tracer_data_values_2, rad)
 
-      use o_PARAM, only: wp
+      use recom_declarations, only: wp
 
       implicit none
 
@@ -88,7 +89,8 @@ module get_particle_density_interface
   interface
     subroutine get_particle_density(num_tracers, myDim_nod2d, eDim_nod2D, nl, ulevels_nod2D, &
                                     nlevels_nod2D, tracers_info)
-        use recom_glovar
+        use recom_declarations, only: wp
+        use recom_glovar, only: tracers_info_type
 
         implicit none
 
@@ -126,7 +128,6 @@ subroutine ver_sinking_recom_benthos(tr_num, nl, ulevels_nod2D, nlevels_nod2D, z
                                      r_mpitype_nod2D, s_mpitype_nod3D,           &
                                      r_mpitype_nod3D, sPE, rPE, requests, nreq, dt)
 
-    use o_PARAM, only: wp
     use recom_g_comm_auto, only: recom_exchange_nod
 
     use recom_declarations
@@ -374,8 +375,6 @@ subroutine diff_ver_recom_expl(nl, ulevels_nod2D, nlevels_nod2D, nod_in_elem2D_n
 ! Remineralization from benthos
 ! bottom_flux
 
-    use o_PARAM, only: wp
-
     use recom_declarations
     use recom_locvar
     use recom_glovar
@@ -507,8 +506,6 @@ subroutine ver_sinking_recom(tr_num, nl, ulevels_nod2D, nlevels_nod2D, zbar_3d_n
                              hnode, hnode_new, tracer_id, tracer_data_values, myDim_nod2d, &
                              vert_sink, dt)
 ! Sinking in water column
-
-    use o_param, only: wp
 
     use REcoM_declarations
     use REcoM_LocVar
@@ -761,7 +758,7 @@ subroutine ballast(myDim_nod2D, ulevels_nod2D, nlevels_nod2D, &
     use recom_config
     use recom_glovar
 
-    use o_PARAM, only: wp
+    use recom_declarations, only: wp
     use mdepth2press, only: depth2press
     use gsw_mod_toolbox, only: gsw_sa_from_sp, gsw_ct_from_pt,gsw_rho
 

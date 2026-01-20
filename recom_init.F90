@@ -9,7 +9,7 @@ module recom_init_interface
                               myDim_nod2d, eDim_nod2D, mype, MPI_COMM_FESOM, myDim_elem2D, & 
                               eDim_elem2D, tracers_info, num_tracers, rad)
         use recom_glovar, only: tracers_info_type
-        use o_param, only: wp
+        use recom_declarations, only: wp
         integer,        intent(in)                  :: nl, mydim_nod2d, edim_nod2d, mype, num_tracers
         integer,        intent(in)                  :: mpi_comm_fesom, mydim_elem2d, edim_elem2d
         integer,        intent(in), dimension(:)    :: ulevels_nod2d, nlevels_nod2d 
@@ -26,7 +26,6 @@ subroutine recom_init(nl, ulevels_nod2D, nlevels_nod2D, geo_coord_nod2D, Z_3d_n,
                       myDim_nod2d, eDim_nod2D, mype, MPI_COMM_FESOM, myDim_elem2D, & 
                       eDim_elem2D, tracers_info, num_tracers, rad)
 
-    use o_param, only: wp
     use mpi
 
     use REcoM_declarations
