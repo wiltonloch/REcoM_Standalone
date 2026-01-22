@@ -8,7 +8,7 @@ module recom_interface
                              z_3d_n, zbar_3d_n, geo_coord_nod2D, ocean_area, areasvol, myDim_nod2d,      &
                              eDim_nod2D, mype, MPI_COMM_FESOM, tracers_info, num_tracers, tra_recom_sms, &
                              npes, sn, rn, s_mpitype_nod2D, r_mpitype_nod2D, s_mpitype_nod3D, r_mpitype_nod3D, &
-                             sPE, rPE, requests, nreq, dt, daynew, month, mstep, ndpyr, yearold, rad, kappa, &
+                             sPE, rPE, requests, nreq, dt, daynew, month, mstep, ndpyr, yearold, timenew, rad, kappa, &
                              press_air, u_wind, v_wind, shortwave)
             use recom_glovar
             use recom_declarations, only: wp
@@ -17,7 +17,7 @@ module recom_interface
             integer, intent(in)                              :: mype, MPI_COMM_FESOM, num_tracers
             integer, intent(in)                              :: mstep, daynew, yearold, month, ndpyr
             integer, intent(in), dimension(:)                :: ulevels_nod2D, nlevels_nod2D
-            real(kind=WP), intent(inout)                     :: dt, kappa
+            real(kind=WP), intent(inout)                     :: dt, kappa, timenew
             real(kind=WP), intent(in)                        :: ocean_area, rad
             real(kind=WP), intent(in), dimension(:)          :: ice_data_values, press_air
             real(kind=WP), intent(in), dimension(:)          :: u_wind, v_wind, shortwave
@@ -56,7 +56,7 @@ subroutine recom(ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnode,      
                  z_3d_n, zbar_3d_n, geo_coord_nod2D, ocean_area, areasvol, myDim_nod2d,      &
                  eDim_nod2D, mype, MPI_COMM_FESOM, tracers_info, num_tracers, tra_recom_sms, &
                  npes, sn, rn, s_mpitype_nod2D, r_mpitype_nod2D, s_mpitype_nod3D, r_mpitype_nod3D, &
-                 sPE, rPE, requests, nreq, dt, daynew, month, mstep, ndpyr, yearold, rad, kappa, &
+                 sPE, rPE, requests, nreq, dt, daynew, month, mstep, ndpyr, yearold, timenew, rad, kappa, &
                  press_air, u_wind, v_wind, shortwave)
 
     use recom_g_comm_auto, only: recom_exchange_nod
@@ -77,7 +77,7 @@ subroutine recom(ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnode,      
     integer, intent(in)                              :: mype, MPI_COMM_FESOM, num_tracers
     integer, intent(in)                              :: mstep, daynew, yearold, month, ndpyr
     integer, intent(in), dimension(:)                :: ulevels_nod2D, nlevels_nod2D
-    real(kind=WP), intent(inout)                     :: dt, kappa
+    real(kind=WP), intent(inout)                     :: dt, kappa, timenew
     real(kind=WP), intent(in)                        :: ocean_area, rad
     real(kind=WP), intent(in), dimension(:)          :: ice_data_values, press_air
     real(kind=WP), intent(in), dimension(:)          :: u_wind, v_wind, shortwave
@@ -156,7 +156,12 @@ subroutine recom(ice_data_values, nl, ulevels_nod2D, nlevels_nod2D, hnode,      
                      areasvol, dt)
 !   optional I/O of isoCO2 and inferred cosmogenic 14C production; this may cost some CPU time
     if (ciso .and. ciso_14) then
-      call annual_event(do_update)
+      if ((daynew == ndpyr) .and. (timenew==86400.)) then
+         do_update=.true.
+      else
+         do_update=.false.
+      endif
+
       if (do_update .and. mype==0) write (*, fmt = '(a50,2x,i6,4(2x,f6.2))') &
                                          'Year, xCO2 (ppm), cosmic 14C flux (at / cm² / s):', &
                                           yearold, x_co2atm(1), x_co2atm_13(1), x_co2atm_14(1), cosmic_14(1) * production_rate_to_flux_14
