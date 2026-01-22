@@ -35,7 +35,6 @@ subroutine recom_init(nl, ulevels_nod2D, nlevels_nod2D, geo_coord_nod2D, Z_3d_n,
     use REcoM_ciso
 
     implicit none
-#include "netcdf.inc"
 
     integer,        intent(in)                  :: nl, mydim_nod2d, edim_nod2d, mype, num_tracers
     integer,        intent(in)                  :: mpi_comm_fesom, mydim_elem2d, edim_elem2d
