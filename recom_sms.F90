@@ -5281,7 +5281,7 @@ real(kind=8) :: &
                 print*,'grazingFlux_Cocco2: ', grazingFlux_Cocco2
                 print*,'grazingFlux_Cocco3: ', grazingFlux_Cocco3
                 print*,'recipQuota_cocco: ', recipQuota_cocco
-                call par_ex(MPI_COMM_FESOM, mype)
+                call MPI_ABORT(MPI_COMM_FESOM, 1)
                 stop
             endif
 
