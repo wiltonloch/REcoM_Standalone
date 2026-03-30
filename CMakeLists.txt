@@ -5,7 +5,7 @@ project(REcoM LANGUAGES Fortran)
 find_package(MPI REQUIRED)
 
 # Get the list of Fortran sources in the folder
-file(GLOB_RECURSE SOURCES "*.?90")
+file(GLOB SOURCES "recom_*.?90" "mocsy/*.?90")
 
 # Sets the fortran flag to allow files with no line length limit
 set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-none")
