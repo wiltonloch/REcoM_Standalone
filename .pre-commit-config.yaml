@@ -23,5 +23,14 @@ repos:
     rev: v0.8.0
     hooks:
       - id: fortitude
-        exclude: 'mocsy'
+        exclude: ^(mocsy/|fabm/)
         args: [--target-std, "f2008", --line-length, "101"]
+
+      # This is necessary here because FABM has a factory interface definition which does not
+      # define an implicit intent for a parameter. Since Fortitude complains about that and we
+      # have to adhere to FABM's interface, we need to ignore that specific error for the FABM
+      # folder. This should be noted to FABM developers.
+      - id: fortitude
+        name: fortitude for fabm folder
+        files: fabm
+        args: [--target-std, "f2008", --line-length, "101", --ignore, C061]
