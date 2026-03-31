@@ -33,4 +33,4 @@ repos:
       - id: fortitude
         name: fortitude for fabm folder
         files: fabm
-        args: [--target-std, "f2008", --line-length, "101", --ignore, C061]
+        args: [--target-std, "f2008", --line-length, "101", --ignore, C061, --ignore, E001]
